@@ -30,6 +30,28 @@ def plan(body: GoalIn, session: Session = Depends(get_session)):
         raise HTTPException(status_code=502, detail=f"Agent planning failed: {exc}")
 
 
+@router.get("/models")
+def list_models():
+    """Diagnostic: which models this API key can actually use for generateContent.
+    Cheap metadata call — does not consume generation quota."""
+    import google.generativeai as genai
+
+    from ..config import settings
+
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured")
+    genai.configure(api_key=settings.gemini_api_key)
+    try:
+        models = [
+            m.name
+            for m in genai.list_models()
+            if "generateContent" in getattr(m, "supported_generation_methods", [])
+        ]
+        return {"configured_model": settings.gemini_model, "available_models": models}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"list_models failed: {exc}")
+
+
 @router.post("/report/{campaign_id}")
 def report(campaign_id: str, session: Session = Depends(get_session)):
     campaign = session.get(Campaign, campaign_id)

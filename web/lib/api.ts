@@ -1,0 +1,131 @@
+// Thin typed client for the Taco Town CRM API.
+const BASE = (process.env.NEXT_PUBLIC_CRM_URL || "http://localhost:8000").replace(/\/$/, "");
+
+export interface CustomerPreview {
+  id: string;
+  name: string;
+  city: string;
+  order_count: number;
+  lifetime_value: number;
+  last_order_days: number | null;
+  preferred_channel: string;
+  favorite_item: string | null;
+}
+
+export interface SegmentPreview {
+  spec: Record<string, unknown>;
+  audience_size: number;
+  total_lifetime_value: number;
+  channel_breakdown: Record<string, number>;
+  samples: CustomerPreview[];
+}
+
+export interface Proposal {
+  goal: string;
+  name: string;
+  rationale: string;
+  segment_spec: Record<string, unknown>;
+  segment_preview: SegmentPreview;
+  messages: Record<string, string>;
+}
+
+export interface Funnel {
+  audience: number;
+  holdout: number;
+  targeted: number;
+  queued: number;
+  sent: number;
+  delivered: number;
+  opened: number;
+  read: number;
+  clicked: number;
+  failed: number;
+}
+
+export interface Attribution {
+  targeted: number;
+  holdout: number;
+  targeted_conversions: number;
+  holdout_conversions: number;
+  targeted_conversion_rate: number;
+  holdout_conversion_rate: number;
+  lift: number;
+  incremental_conversions: number;
+  avg_order_value: number;
+  gross_attributed_revenue: number;
+  recovered_revenue: number;
+}
+
+export interface CampaignRow {
+  id: string;
+  name: string;
+  goal: string;
+  status: string;
+  audience_size: number;
+  holdout_size: number;
+  conversions_simulated: boolean;
+  created_at: string;
+  funnel: Funnel | null;
+}
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      detail = (await res.json()).detail || detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+  }
+  return res.json();
+}
+
+export const api = {
+  plan: (goal: string) =>
+    req<Proposal>("/agent/plan", { method: "POST", body: JSON.stringify({ goal }) }),
+
+  createCampaign: (p: {
+    name: string;
+    goal: string;
+    segment_spec: Record<string, unknown>;
+    messages: Record<string, string>;
+    holdout_percent: number;
+  }) => req<{ campaign: CampaignRow; audience_size: number }>("/campaigns", {
+    method: "POST",
+    body: JSON.stringify(p),
+  }),
+
+  launch: (id: string) =>
+    req<{ status: string; campaign_id: string; audience_size: number; targeted: number; holdout: number }>(
+      `/campaigns/${id}/launch`,
+      { method: "POST" },
+    ),
+
+  stats: (id: string) => req<Funnel>(`/campaigns/${id}/stats`),
+
+  simulate: (id: string) =>
+    req<{ status: string; new_orders?: number; gross_attributed_revenue?: number }>(
+      `/campaigns/${id}/simulate-conversions`,
+      { method: "POST" },
+    ),
+
+  attribution: (id: string) => req<Attribution>(`/campaigns/${id}/attribution`),
+
+  report: (id: string) =>
+    req<{ summary: string; funnel: Funnel; attribution: Attribution }>(`/agent/report/${id}`, {
+      method: "POST",
+    }),
+
+  listCampaigns: () => req<CampaignRow[]>("/campaigns"),
+};
+
+export const inr = (n: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+
+export const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
