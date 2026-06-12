@@ -49,3 +49,32 @@ def reset(
 @router.get("/stats")
 def stats(session: Session = Depends(get_session)):
     return summarize(session)
+
+
+@router.get("/dbcheck")
+def dbcheck():
+    """Diagnostic: reports DB scheme, connectivity and table state. No secrets exposed."""
+    from sqlalchemy import text
+    from sqlmodel import select
+
+    from ..db import engine
+    from ..models import Customer
+
+    raw = settings.database_url
+    info = {
+        "url_scheme": raw.split("://", 1)[0] if "://" in raw else "unknown",
+        "uses_internal_network": "railway.internal" in raw,
+    }
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        info["connect"] = "ok"
+    except Exception as exc:  # noqa: BLE001
+        info["connect_error"] = f"{type(exc).__name__}: {exc}"
+        return info
+    try:
+        with Session(engine) as s:
+            info["customer_count"] = len(s.exec(select(Customer)).all())
+    except Exception as exc:  # noqa: BLE001
+        info["query_error"] = f"{type(exc).__name__}: {exc}"
+    return info

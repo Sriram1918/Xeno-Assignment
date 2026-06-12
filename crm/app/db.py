@@ -2,13 +2,17 @@ from sqlmodel import SQLModel, Session, create_engine
 
 from .config import settings
 
-# Railway hands out URLs starting with "postgresql://"; SQLModel/psycopg3 wants the
-# "+psycopg" driver suffix. Normalise so either form works.
-_url = settings.database_url
-if _url.startswith("postgresql://"):
-    _url = _url.replace("postgresql://", "postgresql+psycopg://", 1)
+# Hosts hand out "postgres://" or "postgresql://"; SQLAlchemy needs an explicit psycopg3
+# driver ("postgresql+psycopg://"). Normalise both forms so the URL always loads the v3 driver.
+def _normalise(url: str) -> str:
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
 
-engine = create_engine(_url, pool_pre_ping=True)
+
+engine = create_engine(_normalise(settings.database_url), pool_pre_ping=True)
 
 
 def init_db() -> None:
