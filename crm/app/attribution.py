@@ -25,12 +25,12 @@ from .models import Campaign, Communication, Customer, Order, utcnow
 # Conversion probability by deepest engagement reached. The gap between these and the holdout
 # baseline is the causal lift the holdout method will recover.
 _CONVERSION_PROB = {
-    "clicked": 0.22,
-    "read": 0.13,
-    "opened": 0.10,
+    "clicked": 0.34,   # clicked the offer -> hot lead
+    "read": 0.18,
+    "opened": 0.12,
     "delivered": 0.06,
-    "none": 0.03,      # targeted but never delivered
-    "holdout": 0.05,   # control group baseline (no message)
+    "none": 0.02,      # targeted but never delivered
+    "holdout": 0.04,   # control group baseline (no message)
 }
 
 
