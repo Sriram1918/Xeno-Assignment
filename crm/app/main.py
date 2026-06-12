@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -17,7 +18,21 @@ async def lifespan(app: FastAPI):
         init_db()
     except Exception as exc:  # noqa: BLE001 - log and continue; health must stay up
         print(f"[startup] init_db skipped: {exc}")
-    yield
+
+    # Start the outbox dispatcher as a background task in the API process.
+    from .worker import dispatcher_loop
+
+    stop_event = asyncio.Event()
+    worker_task = asyncio.create_task(dispatcher_loop(stop_event))
+    try:
+        yield
+    finally:
+        stop_event.set()
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="Taco Town CRM", version="0.1.0", lifespan=lifespan)
@@ -29,10 +44,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .api import admin, segments  # noqa: E402 - imported after app/middleware are set up
+from .api import admin, campaigns, receipts, segments  # noqa: E402 - after app/middleware setup
 
 app.include_router(admin.router)
 app.include_router(segments.router)
+app.include_router(campaigns.router)
+app.include_router(receipts.router)
 
 
 @app.get("/health")

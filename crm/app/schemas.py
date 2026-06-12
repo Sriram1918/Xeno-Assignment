@@ -46,3 +46,25 @@ class SegmentPreview(BaseModel):
     total_lifetime_value: float
     channel_breakdown: dict[str, int]
     samples: list[CustomerPreview]
+
+
+class CampaignCreate(BaseModel):
+    name: str
+    goal: str
+    segment_spec: SegmentSpec
+    messages: dict[str, str] | None = None  # {channel: template}; falls back to defaults
+    holdout_percent: float = Field(default=10.0, ge=0, le=50)
+
+
+from datetime import datetime  # noqa: E402
+
+from .models import CommStatus  # noqa: E402
+
+
+class ReceiptIn(BaseModel):
+    """Callback payload from the channel service. `event_id` is the idempotency key."""
+
+    event_id: str
+    communication_id: str
+    event: CommStatus
+    occurred_at: datetime

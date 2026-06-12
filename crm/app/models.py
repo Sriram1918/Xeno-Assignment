@@ -122,6 +122,7 @@ class Communication(SQLModel, table=True):
     is_holdout: bool = Field(default=False, index=True)  # control group: never dispatched
     attempts: int = Field(default=0)
     last_error: str | None = Field(default=None)
+    next_retry_at: datetime | None = Field(default=None)  # backoff gate for the dispatcher
     created_at: datetime = Field(default_factory=utcnow)
     sent_at: datetime | None = Field(default=None)
     delivered_at: datetime | None = Field(default=None)
