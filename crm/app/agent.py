@@ -52,6 +52,7 @@ Include a clear, appealing offer. Tone: friendly and a little playful.
 - sms: very short, plain, no emoji.
 - email: 2-3 sentences with a brief sign-off from "Team {{brand}}".
 
+Use plain ASCII only — no emoji and no curly/smart quotes (use straight ' and ").
 Return ONLY a JSON object with keys "whatsapp", "sms", "email", "rcs".
 Campaign goal: "{goal}" """
 
