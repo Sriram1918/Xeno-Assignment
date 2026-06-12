@@ -5,6 +5,7 @@ from .config import settings
 # Hosts hand out "postgres://" or "postgresql://"; SQLAlchemy needs an explicit psycopg3
 # driver ("postgresql+psycopg://"). Normalise both forms so the URL always loads the v3 driver.
 def _normalise(url: str) -> str:
+    url = url.strip()  # env values can carry a stray trailing newline; drop it
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
     if url.startswith("postgresql://"):
