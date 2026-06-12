@@ -18,7 +18,7 @@ from .models import Campaign
 from .schemas import SegmentSpec
 from .segments import preview_segment
 
-MODEL = "gemini-2.0-flash"
+# Model id comes from settings (gemini-1.5-flash by default — most reliable free tier).
 
 SEGMENT_PROMPT = """You are the targeting brain of a QSR marketing CRM for the brand "Taco Town".
 Convert the marketer's goal into a JSON object with keys: "spec", "name", "rationale".
@@ -71,7 +71,7 @@ def _model():
     if not settings.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not configured")
     genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel(MODEL)
+    return genai.GenerativeModel(settings.gemini_model)
 
 
 def _parse_json(text: str) -> dict:
