@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="Taco Town CRM", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Taco Town CRM", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
