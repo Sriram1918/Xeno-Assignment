@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Anthropic API key for the AI agent (added when we build the agent).
     anthropic_api_key: str = ""
 
+    # Guards the destructive admin endpoints (seed / reset). Override in production.
+    admin_token: str = "tacotown-seed"
+
     environment: str = "local"
 
 

@@ -56,6 +56,12 @@ We go **deep on one job (win-back), not wide on five.** We publicly name what we
 | Jun 14 PM/eve (6 hrs) | Shoot video | Recorded per script → upload to Claude for review → tune |
 | Jun 15 AM | Buffer + submit | Final smoke test + submit URL + repo + video |
 
+## Live deployment (Railway project: fearless-cooperation / production)
+- **CRM service:** https://xeno-assignment-production-8c54.up.railway.app  (root dir `crm`)
+- **Channel service:** https://surprising-trust-production-b6e7.up.railway.app  (root dir `channel`)
+- **Postgres:** in-project, referenced via `DATABASE_URL`
+- Health: `GET /health` on each returns `{status: ok}`
+
 ## Video beats (PDF-mandated structure, ~5-6 min, casual tone)
 1. Product intro (~0.5) — brand world + the problem + our bold choice & cut list
 2. Functional demo (~1.5) — live end-to-end agent run

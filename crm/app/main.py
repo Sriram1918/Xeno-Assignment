@@ -8,9 +8,10 @@ from .config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # DB tables are created here once models exist. Kept defensive so a missing/cold
-    # database never takes down the health endpoint during early deploys.
+    # DB tables are created here. Kept defensive so a missing/cold database never takes
+    # down the health endpoint during early deploys.
     try:
+        from . import models  # noqa: F401 - register tables on SQLModel.metadata
         from .db import init_db
 
         init_db()
@@ -27,6 +28,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from .api import admin  # noqa: E402 - imported after app/middleware are set up
+
+app.include_router(admin.router)
 
 
 @app.get("/health")
