@@ -8,15 +8,9 @@ from sqlmodel import Session, select
 
 from ..attribution import attribution_report, simulate_conversions
 from ..db import get_session
+from ..funnels import funnel as _funnel
 from ..messaging import DEFAULT_TEMPLATES, recipient_for, render_message
-from ..models import (
-    TERMINAL_FAILURES,
-    Campaign,
-    CampaignStatus,
-    CommStatus,
-    Communication,
-    utcnow,
-)
+from ..models import Campaign, CampaignStatus, Communication, utcnow
 from ..schemas import CampaignCreate, SegmentSpec
 from ..segments import run_segment
 
@@ -89,25 +83,6 @@ def launch_campaign(campaign_id: str, session: Session = Depends(get_session)):
         "audience_size": len(customers),
         "targeted": len(customers) - n_holdout,
         "holdout": n_holdout,
-    }
-
-
-def _funnel(session: Session, campaign_id: str) -> dict:
-    comms = session.exec(
-        select(Communication).where(Communication.campaign_id == campaign_id)
-    ).all()
-    targeted = [c for c in comms if not c.is_holdout]
-    return {
-        "audience": len(comms),
-        "holdout": sum(c.is_holdout for c in comms),
-        "targeted": len(targeted),
-        "queued": sum(c.status == CommStatus.queued for c in targeted),
-        "sent": sum(c.sent_at is not None for c in targeted),
-        "delivered": sum(c.delivered_at is not None for c in targeted),
-        "opened": sum(c.opened_at is not None for c in targeted),
-        "read": sum(c.read_at is not None for c in targeted),
-        "clicked": sum(c.clicked_at is not None for c in targeted),
-        "failed": sum(c.status in TERMINAL_FAILURES for c in targeted),
     }
 
 

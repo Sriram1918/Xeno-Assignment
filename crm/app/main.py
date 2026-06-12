@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="Taco Town CRM", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Taco Town CRM", version="0.4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,12 +44,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .api import admin, campaigns, receipts, segments  # noqa: E402 - after app/middleware setup
+from .api import (  # noqa: E402 - after app/middleware setup
+    admin,
+    agent,
+    campaigns,
+    receipts,
+    segments,
+)
 
 app.include_router(admin.router)
 app.include_router(segments.router)
 app.include_router(campaigns.router)
 app.include_router(receipts.router)
+app.include_router(agent.router)
 
 
 @app.get("/health")
