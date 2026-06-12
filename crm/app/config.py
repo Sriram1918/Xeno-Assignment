@@ -17,8 +17,9 @@ class Settings(BaseSettings):
 
     # Google Gemini API key (free tier) for the AI agent. Added when we build the agent.
     gemini_api_key: str = ""
-    # Model id; gemini-1.5-flash has the most reliable free tier. Override via env if needed.
-    gemini_model: str = "gemini-1.5-flash"
+    # Model id. gemini-3.1-flash-lite has this account's best free quota (500 req/day).
+    # Override via GEMINI_MODEL env if needed.
+    gemini_model: str = "models/gemini-3.1-flash-lite"
 
     # Guards the destructive admin endpoints (seed / reset). Override in production.
     admin_token: str = "tacotown-seed"
