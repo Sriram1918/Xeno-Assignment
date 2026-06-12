@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     # Public base URL of THIS crm service, so the channel can call our receipt API back.
     crm_public_url: str = "http://localhost:8000"
 
-    # Anthropic API key for the AI agent (added when we build the agent).
-    anthropic_api_key: str = ""
+    # Google Gemini API key (free tier) for the AI agent. Added when we build the agent.
+    gemini_api_key: str = ""
 
     # Guards the destructive admin endpoints (seed / reset). Override in production.
     admin_token: str = "tacotown-seed"

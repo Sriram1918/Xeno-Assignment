@@ -29,9 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .api import admin  # noqa: E402 - imported after app/middleware are set up
+from .api import admin, segments  # noqa: E402 - imported after app/middleware are set up
 
 app.include_router(admin.router)
+app.include_router(segments.router)
 
 
 @app.get("/health")

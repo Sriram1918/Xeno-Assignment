@@ -61,3 +61,82 @@ class Order(SQLModel, table=True):
     placed_at: datetime = Field(index=True)
     fulfillment: Fulfillment = Field(default=Fulfillment.delivery)
     item: str | None = Field(default=None)
+    # Set when an order is attributed to a campaign (order placed after a click). See attribution.
+    attributed_campaign_id: str | None = Field(default=None, index=True)
+
+
+class CommStatus(str, Enum):
+    queued = "queued"        # in the outbox, not yet dispatched
+    sent = "sent"            # handed to the channel service
+    delivered = "delivered"
+    opened = "opened"
+    read = "read"
+    clicked = "clicked"
+    failed = "failed"        # terminal: dispatch failed after retries
+    bounced = "bounced"      # terminal: channel could not deliver
+
+
+# Positive lifecycle is monotonic; we only ever advance forward. Out-of-order callbacks
+# (a late "delivered" after "opened") are ignored by comparing ranks. failed/bounced are
+# terminal and handled separately.
+STATUS_RANK = {
+    CommStatus.queued: 0,
+    CommStatus.sent: 1,
+    CommStatus.delivered: 2,
+    CommStatus.opened: 3,
+    CommStatus.read: 4,
+    CommStatus.clicked: 5,
+}
+TERMINAL_FAILURES = {CommStatus.failed, CommStatus.bounced}
+
+
+class CampaignStatus(str, Enum):
+    draft = "draft"          # proposed by agent, awaiting approval
+    launched = "launched"    # communications enqueued/dispatching
+    completed = "completed"
+
+
+class Campaign(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    name: str
+    goal: str                                    # the marketer's plain-English intent
+    segment_spec: str = Field(default="{}")      # JSON of the SegmentSpec used
+    messages: str = Field(default="{}")          # JSON {channel: message_template}
+    status: CampaignStatus = Field(default=CampaignStatus.draft)
+    holdout_percent: float = Field(default=10.0)  # control group held back from sending
+    audience_size: int = Field(default=0)
+    holdout_size: int = Field(default=0)
+    created_at: datetime = Field(default_factory=utcnow)
+    launched_at: datetime | None = Field(default=None)
+
+
+class Communication(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    campaign_id: str = Field(foreign_key="campaign.id", index=True)
+    customer_id: str = Field(foreign_key="customer.id", index=True)
+    channel: Channel
+    recipient: str
+    message: str
+    status: CommStatus = Field(default=CommStatus.queued, index=True)
+    status_rank: int = Field(default=0)
+    is_holdout: bool = Field(default=False, index=True)  # control group: never dispatched
+    attempts: int = Field(default=0)
+    last_error: str | None = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow)
+    sent_at: datetime | None = Field(default=None)
+    delivered_at: datetime | None = Field(default=None)
+    opened_at: datetime | None = Field(default=None)
+    read_at: datetime | None = Field(default=None)
+    clicked_at: datetime | None = Field(default=None)
+    failed_at: datetime | None = Field(default=None)
+
+
+class ReceiptEvent(SQLModel, table=True):
+    """Dedup log of channel callbacks. The channel-provided `id` is the idempotency key:
+    a duplicate callback hits the primary-key conflict and is ignored."""
+
+    id: str = Field(primary_key=True)            # channel event id (idempotency key)
+    communication_id: str = Field(foreign_key="communication.id", index=True)
+    event: CommStatus
+    occurred_at: datetime
+    received_at: datetime = Field(default_factory=utcnow)

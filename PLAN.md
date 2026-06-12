@@ -32,7 +32,8 @@ We go **deep on one job (win-back), not wide on five.** We publicly name what we
 - **Frontend:** Next.js (chat panel + dashboard) on **Vercel** (free)
 - **Backend hosting:** **Railway Hobby ($5/mo)** — two always-on services, delete after eval
 - **Database:** **Railway Postgres** (everything in one place)
-- **AI:** Anthropic Claude with tool-calling → returns a TYPED segment spec we run as a real query
+- **AI:** Google **Gemini free tier** (gemini-2.0-flash) with structured-JSON output → returns a
+  TYPED SegmentSpec we run as a real query. (No paid API; explicit tradeoff: would use Claude in prod.)
 - **Keep-awake:** `/health` endpoint + free UptimeRobot ping every ~10 min (insurance)
 - **Voice input:** SKIPPED for core; optional thin layer only if everything else is rock-solid
 - **Validation:** holdout/control group → Recovered Revenue is measured lift, not a guess
