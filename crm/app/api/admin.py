@@ -46,6 +46,21 @@ def reset(
     return {"status": "reset", "total_customers": 0, "total_orders": 0}
 
 
+@router.post("/recreate")
+def recreate(token: str = Query(..., description="Admin token")):
+    """Drop and recreate all tables from the current models. Use after a schema change
+    (SQLModel's create_all never alters existing tables). Destructive: re-seed afterwards."""
+    _require_token(token)
+    from sqlmodel import SQLModel
+
+    from .. import models  # noqa: F401 - ensure all tables are registered
+    from ..db import engine
+
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+    return {"status": "recreated", "tables": sorted(SQLModel.metadata.tables.keys())}
+
+
 @router.get("/stats")
 def stats(session: Session = Depends(get_session)):
     return summarize(session)
