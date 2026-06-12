@@ -106,6 +106,7 @@ class Campaign(SQLModel, table=True):
     holdout_percent: float = Field(default=10.0)  # control group held back from sending
     audience_size: int = Field(default=0)
     holdout_size: int = Field(default=0)
+    conversions_simulated: bool = Field(default=False)  # guards the demo "fast-forward" step
     created_at: datetime = Field(default_factory=utcnow)
     launched_at: datetime | None = Field(default=None)
 

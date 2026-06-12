@@ -6,6 +6,7 @@ import random
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from ..attribution import attribution_report, simulate_conversions
 from ..db import get_session
 from ..messaging import DEFAULT_TEMPLATES, recipient_for, render_message
 from ..models import (
@@ -132,3 +133,24 @@ def campaign_stats(campaign_id: str, session: Session = Depends(get_session)):
     if session.get(Campaign, campaign_id) is None:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return _funnel(session, campaign_id)
+
+
+@router.post("/{campaign_id}/simulate-conversions")
+def simulate_campaign_conversions(campaign_id: str, session: Session = Depends(get_session)):
+    """Demo 'fast-forward a week': generate post-campaign orders with an engagement-driven
+    causal effect, so the holdout-based attribution has real outcomes to measure."""
+    campaign = session.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if campaign.status != CampaignStatus.launched:
+        raise HTTPException(status_code=400, detail="Campaign must be launched first")
+    return simulate_conversions(session, campaign)
+
+
+@router.get("/{campaign_id}/attribution")
+def campaign_attribution(campaign_id: str, session: Session = Depends(get_session)):
+    """Holdout-validated attribution: lift, incremental conversions, recovered revenue."""
+    campaign = session.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return attribution_report(session, campaign)
