@@ -123,7 +123,18 @@ export const api = {
     }),
 
   listCampaigns: () => req<CampaignRow[]>("/campaigns"),
+
+  demoStats: () => req<DemoStats>("/admin/stats"),
+
+  resetDemo: () => req<DemoStats & { status: string }>("/demo/reset", { method: "POST" }),
 };
+
+export interface DemoStats {
+  total_customers: number;
+  total_orders: number;
+  lapsed_regulars_45_120d: number;
+  lifetime_value_of_lapsed_regulars: number;
+}
 
 export const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);

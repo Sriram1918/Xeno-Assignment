@@ -7,5 +7,24 @@
 }
 
 body {
-  background: radial-gradient(1200px 600px at 50% -10%, #1c1917 0%, #0a0a0a 60%);
+  background:
+    radial-gradient(1100px 520px at 82% -8%, rgba(228, 0, 124, 0.28), transparent 60%),
+    radial-gradient(1000px 620px at 8% 4%, rgba(92, 45, 145, 0.45), transparent 60%),
+    #120318;
+  background-attachment: fixed;
+}
+
+/* subtle entrance animation for cards */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.4s ease-out both;
 }

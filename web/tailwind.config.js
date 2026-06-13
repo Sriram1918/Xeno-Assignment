@@ -4,10 +4,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          DEFAULT: "#f59e0b", // amber-500, taco warmth
-          dark: "#b45309",
+        tb: {
+          purple: "#5C2D91", // deep brand purple
+          grape: "#7B2D8E",
+          magenta: "#C8159E", // bright magenta
+          pink: "#E4007C",
+          yellow: "#FFC72C", // cheese-yellow CTA
         },
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
     },
   },
