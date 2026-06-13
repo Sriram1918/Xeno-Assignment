@@ -6,9 +6,9 @@ const display = Anton({ weight: "400", subsets: ["latin"], variable: "--font-dis
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Taco Bell — AI Win-Back CRM",
+  title: "Reach — AI-native CRM for consumer brands",
   description:
-    "An AI agent that wins back lapsed shoppers across WhatsApp, SMS & Email — and proves the recovered revenue.",
+    "An AI-native CRM that wins back lapsed shoppers across WhatsApp, SMS & Email — and proves the recovered revenue.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
