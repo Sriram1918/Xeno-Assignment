@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Brandmark } from "@/components/Brand";
+import { Insights } from "@/components/Insights";
 import {
   api,
   Attribution,
@@ -10,12 +11,13 @@ import {
   DemoStats,
   Funnel,
   inr,
+  Opportunity,
   pct,
   Proposal,
 } from "@/lib/api";
 
 export default function AppPage() {
-  const [view, setView] = useState<"agent" | "dashboard">("agent");
+  const [view, setView] = useState<"agent" | "insights" | "dashboard">("agent");
   const [stats, setStats] = useState<DemoStats | null>(null);
   const [resetting, setResetting] = useState(false);
   const [flowKey, setFlowKey] = useState(0);
@@ -60,7 +62,7 @@ export default function AppPage() {
         </div>
         <div className="flex items-center gap-2">
           <nav className="flex gap-1 rounded-lg border border-white/15 bg-white/5 p-1 text-sm">
-            {(["agent", "dashboard"] as const).map((v) => (
+            {(["agent", "insights", "dashboard"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -118,7 +120,9 @@ export default function AppPage() {
       </div>
 
       <div className="mt-5">
-        {view === "agent" ? <AgentFlow key={flowKey} onChange={loadStats} /> : <Dashboard />}
+        {view === "agent" && <AgentFlow key={flowKey} onChange={loadStats} />}
+        {view === "insights" && <Insights />}
+        {view === "dashboard" && <Dashboard />}
       </div>
 
       <footer className="mt-12 text-center text-xs text-white/35">
@@ -142,9 +146,14 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [opps, setOpps] = useState<Opportunity[]>([]);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [holdout, setHoldout] = useState(10);
+
+  useEffect(() => {
+    api.opportunities().then((r) => setOpps(r.opportunities)).catch(() => {});
+  }, []);
 
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [funnel, setFunnel] = useState<Funnel | null>(null);
@@ -152,12 +161,14 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
   const [attribution, setAttribution] = useState<Attribution | null>(null);
   const [report, setReport] = useState<string | null>(null);
 
-  const ask = async () => {
-    if (!goal.trim()) return;
+  const ask = async (g?: string) => {
+    const text = (g ?? goal).trim();
+    if (!text) return;
+    setGoal(text);
     setLoading(true);
     setError(null);
     try {
-      const p = await api.plan(goal);
+      const p = await api.plan(text);
       setProposal(p);
       setMessages(p.messages);
       setPhase("proposed");
@@ -247,6 +258,39 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
 
   return (
     <div className="space-y-5">
+      {phase === "idle" && opps.length > 0 && (
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-tb-yellow">
+            ✨ Opportunities the agent spotted
+            <span className="font-normal text-white/45">— click one to run it</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {opps.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => ask(o.goal)}
+                disabled={loading}
+                className="rounded-2xl border border-white/10 bg-gradient-to-b from-tb-magenta/15 to-white/[0.02] p-4 text-left transition hover:border-tb-yellow/50 disabled:opacity-50"
+              >
+                <div className="font-display text-base uppercase tracking-wide">{o.title}</div>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">{o.why}</p>
+                <div className="mt-3 flex items-end justify-between">
+                  <div>
+                    <div className="text-[11px] uppercase text-white/40">Predicted recovery</div>
+                    <div className="text-lg font-bold text-tb-yellow">
+                      {inr(o.predicted_recovered_revenue)}
+                    </div>
+                  </div>
+                  <div className="text-right text-[11px] text-white/45">
+                    {o.audience_size.toLocaleString("en-IN")} people
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Card>
         <Label>Step 1 · Tell the agent what you want</Label>
         <textarea
@@ -272,7 +316,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
         )}
         <div className="mt-3">
           {phase === "idle" ? (
-            <Button onClick={ask} disabled={loading || !goal.trim()}>
+            <Button onClick={() => ask()} disabled={loading || !goal.trim()}>
               {loading ? "Thinking…" : "Ask the agent →"}
             </Button>
           ) : (
@@ -294,6 +338,24 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
           <Badge>Step 2 · Agent proposal</Badge>
           <h2 className="mt-2 font-display text-2xl uppercase tracking-wide">{proposal.name}</h2>
           <p className="mt-1 text-sm text-white/65">{proposal.rationale}</p>
+
+          <div className="mt-3 rounded-lg border border-tb-yellow/30 bg-tb-yellow/5 p-3 text-sm">
+            {proposal.strategy && (
+              <p className="text-white/85">
+                <b className="text-tb-yellow">Agent&apos;s strategy:</b> {proposal.strategy}
+              </p>
+            )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-white/70">
+              <span>
+                <b className="text-white">Offer:</b> {proposal.offer}
+              </span>
+              <span>
+                <b className="text-white">Predicted recovery:</b>{" "}
+                <b className="text-tb-yellow">{inr(proposal.prediction.predicted_recovered_revenue)}</b>{" "}
+                (~{proposal.prediction.predicted_incremental_orders} extra orders)
+              </span>
+            </div>
+          </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Audience" value={proposal.segment_preview.audience_size.toLocaleString("en-IN")} />
@@ -427,6 +489,13 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
             <div className="mt-2 text-xs text-white/50">
               vs {inr(attribution.gross_attributed_revenue)} naive attribution — we only claim true, caused lift
             </div>
+            {proposal && (
+              <div className="mt-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/55">
+                Agent predicted{" "}
+                <b className="text-white/80">{inr(proposal.prediction.predicted_recovered_revenue)}</b>{" "}
+                · actual <b className="text-tb-yellow">{inr(attribution.recovered_revenue)}</b>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

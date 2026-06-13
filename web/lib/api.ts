@@ -20,13 +20,48 @@ export interface SegmentPreview {
   samples: CustomerPreview[];
 }
 
+export interface Prediction {
+  audience_size: number;
+  targeted: number;
+  expected_uplift: number;
+  predicted_incremental_orders: number;
+  avg_order_value: number;
+  predicted_recovered_revenue: number;
+}
+
 export interface Proposal {
   goal: string;
   name: string;
   rationale: string;
+  offer: string;
+  strategy: string;
   segment_spec: Record<string, unknown>;
   segment_preview: SegmentPreview;
+  prediction: Prediction;
   messages: Record<string, string>;
+}
+
+export interface Opportunity {
+  key: string;
+  title: string;
+  why: string;
+  offer: string;
+  goal: string;
+  audience_size: number;
+  value_at_risk: number;
+  predicted_recovered_revenue: number;
+}
+
+export interface Insights {
+  total_customers: number;
+  total_orders: number;
+  gross_revenue: number;
+  avg_order_value: number;
+  revenue_at_risk: number;
+  lifecycle: { stage: string; count: number; value: number }[];
+  channels: { channel: string; count: number }[];
+  spend_buckets: { bucket: string; count: number }[];
+  top_cities: { city: string; count: number }[];
 }
 
 export interface Funnel {
@@ -127,6 +162,10 @@ export const api = {
   demoStats: () => req<DemoStats>("/admin/stats"),
 
   resetDemo: () => req<DemoStats & { status: string }>("/demo/reset", { method: "POST" }),
+
+  insights: () => req<Insights>("/insights"),
+
+  opportunities: () => req<{ opportunities: Opportunity[] }>("/strategy/opportunities"),
 };
 
 export interface DemoStats {
