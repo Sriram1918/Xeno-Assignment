@@ -10,7 +10,10 @@ from ..attribution import attribution_report, simulate_conversions
 from ..db import get_session
 from ..funnels import funnel as _funnel
 from ..messaging import DEFAULT_TEMPLATES, recipient_for, render_message
-from ..models import Campaign, CampaignStatus, Communication, utcnow
+from ..models import Campaign, CampaignStatus, Channel, Communication, utcnow
+
+# Below this lifetime value, route to free Email instead of paid WhatsApp (cost strategy).
+LOW_VALUE_THRESHOLD = 2000.0
 from ..schemas import CampaignCreate, SegmentSpec
 from ..segments import run_segment
 
@@ -36,7 +39,11 @@ def create_campaign(body: CampaignCreate, session: Session = Depends(get_session
 
 
 @router.post("/{campaign_id}/launch")
-def launch_campaign(campaign_id: str, session: Session = Depends(get_session)):
+def launch_campaign(
+    campaign_id: str,
+    channel_strategy: str = "preferred",  # "preferred" or "cost" (low-value -> free Email)
+    session: Session = Depends(get_session),
+):
     campaign = session.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -56,7 +63,11 @@ def launch_campaign(campaign_id: str, session: Session = Depends(get_session)):
 
     comms: list[Communication] = []
     for c in customers:
-        channel = c.preferred_channel
+        # Cost strategy: send low-value customers via free Email instead of paid WhatsApp.
+        if channel_strategy == "cost" and c.lifetime_value < LOW_VALUE_THRESHOLD:
+            channel = Channel.email
+        else:
+            channel = c.preferred_channel
         template = messages.get(channel.value) or DEFAULT_TEMPLATES[channel.value]
         comms.append(
             Communication(
