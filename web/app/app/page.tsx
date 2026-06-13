@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Brandmark } from "@/components/Brand";
 import { Insights } from "@/components/Insights";
+import { Onboarding } from "@/components/Onboarding";
+import { Strategies } from "@/components/Strategies";
 import {
   api,
   Attribution,
@@ -17,7 +19,7 @@ import {
 } from "@/lib/api";
 
 export default function AppPage() {
-  const [view, setView] = useState<"agent" | "insights" | "dashboard">("agent");
+  const [view, setView] = useState<"agent" | "insights" | "strategies" | "dashboard">("agent");
   const [stats, setStats] = useState<DemoStats | null>(null);
   const [resetting, setResetting] = useState(false);
   const [flowKey, setFlowKey] = useState(0);
@@ -52,6 +54,7 @@ export default function AppPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6">
+      <Onboarding />
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -62,7 +65,7 @@ export default function AppPage() {
         </div>
         <div className="flex items-center gap-2">
           <nav className="flex gap-1 rounded-lg border border-white/15 bg-white/5 p-1 text-sm">
-            {(["agent", "insights", "dashboard"] as const).map((v) => (
+            {(["agent", "insights", "strategies", "dashboard"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -122,6 +125,7 @@ export default function AppPage() {
       <div className="mt-5">
         {view === "agent" && <AgentFlow key={flowKey} onChange={loadStats} />}
         {view === "insights" && <Insights />}
+        {view === "strategies" && <Strategies />}
         {view === "dashboard" && <Dashboard />}
       </div>
 
@@ -147,12 +151,17 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const [opps, setOpps] = useState<Opportunity[]>([]);
+  const [analyzing, setAnalyzing] = useState(true);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [holdout, setHoldout] = useState(10);
+  const [language, setLanguage] = useState("English");
+  const [tone, setTone] = useState("Standard");
 
   useEffect(() => {
+    const t = setTimeout(() => setAnalyzing(false), 1300); // brief "analyzing" beat (no API)
     api.opportunities().then((r) => setOpps(r.opportunities)).catch(() => {});
+    return () => clearTimeout(t);
   }, []);
 
   const [campaignId, setCampaignId] = useState<string | null>(null);
@@ -258,12 +267,25 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
 
   return (
     <div className="space-y-5">
-      {phase === "idle" && opps.length > 0 && (
+      {phase === "idle" && (analyzing || opps.length > 0) && (
         <div>
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-tb-yellow">
-            ✨ Opportunities the agent spotted
-            <span className="font-normal text-white/45">— click one to run it</span>
+            {analyzing ? (
+              <span className="animate-pulse">🔎 Analyzing 2,500 customers…</span>
+            ) : (
+              <>
+                ✨ The agent analyzed 2,500 customers — top win-back plays
+                <span className="font-normal text-white/45">— click one to run it</span>
+              </>
+            )}
           </div>
+          {analyzing ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-36 animate-pulse rounded-2xl border border-white/10 bg-white/[0.04]" />
+              ))}
+            </div>
+          ) : (
           <div className="grid gap-3 sm:grid-cols-3">
             {opps.map((o) => (
               <button
@@ -288,6 +310,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
               </button>
             ))}
           </div>
+          )}
         </div>
       )}
 
@@ -424,7 +447,48 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
           </div>
 
           {phase === "proposed" && (
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
+                Smart delivery options
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                <label className="flex items-center gap-2 text-white/65">
+                  Language
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="rounded border border-white/15 bg-black/30 px-2 py-1 text-white outline-none"
+                  >
+                    {["English", "Hindi", "Hinglish", "Tamil", "Telugu"].map((l) => (
+                      <option key={l}>{l}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-white/65">
+                  Tone
+                  <select
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                    className="rounded border border-white/15 bg-black/30 px-2 py-1 text-white outline-none"
+                  >
+                    {["Standard", "Urgency", "Loss-aversion"].map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+                <span className="rounded-full bg-tb-magenta/15 px-2.5 py-1 text-[11px] font-medium text-tb-yellow">
+                  + channel-cost routing
+                </span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-white/40">
+                The platform adapts copy to the chosen language &amp; tone and routes low-value
+                customers to free Email at send time. (Capability preview — see the Strategies tab.)
+              </p>
+            </div>
+          )}
+
+          {phase === "proposed" && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <label className="text-sm text-white/65">
                 Holdout %
                 <input
