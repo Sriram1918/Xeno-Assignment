@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Brandmark } from "@/components/Brand";
 import { Insights } from "@/components/Insights";
 import { Onboarding } from "@/components/Onboarding";
@@ -291,8 +291,6 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
     setError(null);
   };
 
-  const drained = funnel && funnel.queued === 0 && funnel.sent > 0;
-
   return (
     <div className="space-y-5">
       {phase === "idle" && (analyzing || opps.length > 0) && (
@@ -342,6 +340,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
         </div>
       )}
 
+      {(phase === "idle" || phase === "proposed") && (
       <Card>
         <Label>Step 1 · Tell the agent what you want</Label>
         <textarea
@@ -377,6 +376,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
           )}
         </div>
       </Card>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-sm text-red-200">
@@ -384,7 +384,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
         </div>
       )}
 
-      {proposal && phase !== "idle" && (
+      {proposal && phase === "proposed" && (
         <Card>
           <Badge>Step 2 · Agent proposal</Badge>
           <h2 className="mt-2 font-display text-2xl uppercase tracking-wide">{proposal.name}</h2>
@@ -570,42 +570,166 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
         </Card>
       )}
 
-      {phase !== "idle" && phase !== "proposed" && funnel && (
-        <Card>
-          <Badge>Step 3 · Sending {drained ? "· complete" : "· live"}</Badge>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Stat label="Targeted" value={funnel.targeted.toString()} />
-            <Stat label="Holdout (control)" value={funnel.holdout.toString()} />
-            <Stat label="Queued" value={funnel.queued.toString()} />
-          </div>
-          <div className="mt-4 space-y-1">
-            {(["sent", "delivered", "opened", "read", "clicked"] as const).map((k) => (
-              <Bar key={k} label={k} value={funnel[k]} total={funnel.targeted || 1} />
-            ))}
-            {funnel.failed > 0 && (
-              <Bar label="failed/bounced" value={funnel.failed} total={funnel.targeted || 1} danger />
-            )}
-          </div>
-          {drained && phase === "launched" && (
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button onClick={fastForward} disabled={simulating}>
-                {simulating ? "Measuring…" : "⏩ Fast-forward a week → measure results"}
-              </Button>
-              <span className="text-xs text-white/50">
-                Simulates the following week, then measures incremental revenue vs the holdout.
-              </span>
-            </div>
-          )}
-        </Card>
+      {(phase === "launched" || phase === "results") && (
+        <LaunchView
+          proposal={proposal}
+          phase={phase}
+          funnel={funnel}
+          attribution={attribution}
+          report={report}
+          simulating={simulating}
+          costRouting={costRouting}
+          onFastForward={fastForward}
+          onRestart={restart}
+        />
       )}
+    </div>
+  );
+}
 
+/* ---------- Live campaign operations (post-launch) ---------- */
+
+function LaunchView({
+  proposal,
+  phase,
+  funnel,
+  attribution,
+  report,
+  simulating,
+  costRouting,
+  onFastForward,
+  onRestart,
+}: {
+  proposal: Proposal | null;
+  phase: Phase;
+  funnel: Funnel | null;
+  attribution: Attribution | null;
+  report: string | null;
+  simulating: boolean;
+  costRouting: boolean;
+  onFastForward: () => void;
+  onRestart: () => void;
+}) {
+  const drained = !!funnel && funnel.queued === 0 && funnel.sent > 0;
+  const channels = proposal?.segment_preview.channel_breakdown ?? {};
+
+  // Live activity feed — derived client-side from funnel deltas (no extra API calls).
+  const [log, setLog] = useState<{ id: number; text: string }[]>([]);
+  const prev = useRef<Funnel | null>(null);
+  useEffect(() => {
+    if (!funnel) return;
+    const names = proposal?.segment_preview.samples.map((s) => s.name) ?? ["a customer"];
+    const cities = proposal?.segment_preview.samples.map((s) => s.city) ?? ["India"];
+    const rnd = (a: string[]) => a[Math.floor(Math.random() * a.length)] ?? "—";
+    const p = prev.current;
+    const ev: string[] = [];
+    if (!p) {
+      ev.push("🚀 Campaign launched — writing recipients to the delivery outbox");
+    } else {
+      if (funnel.sent > p.sent) ev.push(`📤 Outbox worker dispatched ${funnel.sent - p.sent} messages`);
+      if (funnel.delivered > p.delivered) ev.push(`✓ Delivered to ${rnd(names)} in ${rnd(cities)}`);
+      if (funnel.opened > p.opened) ev.push(`👀 ${rnd(names)} opened your message`);
+      if (funnel.read > p.read) ev.push(`📖 ${rnd(names)} read it through`);
+      if (funnel.clicked > p.clicked) ev.push(`🔥 ${rnd(names)} tapped the offer`);
+      if (funnel.failed > p.failed) ev.push(`⚠️ ${funnel.failed - p.failed} bounced — flagged for retry`);
+    }
+    if (ev.length) {
+      setLog((l) =>
+        [...ev.map((text, i) => ({ id: Date.now() + i, text })), ...l].slice(0, 14),
+      );
+    }
+    prev.current = funnel;
+  }, [funnel, proposal]);
+
+  // Pipeline stage indicator
+  const stages = [
+    { key: "queued", label: "Queued" },
+    { key: "sending", label: "Dispatching" },
+    { key: "delivering", label: "Delivering" },
+    { key: "engaging", label: "Engaging" },
+    { key: "complete", label: "Complete" },
+  ];
+  let activeStage = 0;
+  if (funnel) {
+    if (funnel.sent > 0) activeStage = 1;
+    if (funnel.delivered > 0) activeStage = 2;
+    if (funnel.opened > 0) activeStage = 3;
+    if (drained) activeStage = 4;
+  }
+  if (phase === "results") activeStage = 4;
+
+  const rate = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Hero status banner */}
+      <div
+        className={`overflow-hidden rounded-2xl border p-6 ${
+          phase === "results"
+            ? "border-tb-yellow/50 bg-gradient-to-r from-tb-yellow/15 via-tb-magenta/10 to-transparent"
+            : "border-tb-magenta/40 bg-gradient-to-r from-tb-purple/40 via-tb-magenta/20 to-transparent"
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-tb-yellow">
+              {phase === "results" ? (
+                "✅ Campaign complete"
+              ) : drained ? (
+                "📡 All messages sent — tracking engagement"
+              ) : (
+                <span className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tb-yellow opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-tb-yellow" />
+                  </span>
+                  Campaign live · delivery engine running
+                </span>
+              )}
+            </div>
+            <h2 className="mt-1 font-display text-3xl uppercase tracking-wide">
+              {proposal?.name ?? "Win-back campaign"}
+            </h2>
+          </div>
+          <button onClick={onRestart} className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white/80 transition hover:text-white">
+            ↻ Run another
+          </button>
+        </div>
+
+        {/* Pipeline stage tracker */}
+        <div className="mt-5 flex items-center">
+          {stages.map((s, i) => (
+            <div key={s.key} className="flex flex-1 items-center last:flex-none">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold transition ${
+                    i < activeStage
+                      ? "bg-tb-yellow text-black"
+                      : i === activeStage
+                        ? "bg-tb-yellow text-black ring-4 ring-tb-yellow/30"
+                        : "border border-white/20 bg-black/30 text-white/40"
+                  }`}
+                >
+                  {i < activeStage ? "✓" : i + 1}
+                </div>
+                <span className={`mt-1 text-[10px] uppercase tracking-wide ${i <= activeStage ? "text-white/80" : "text-white/35"}`}>
+                  {s.label}
+                </span>
+              </div>
+              {i < stages.length - 1 && (
+                <div className={`mx-1 h-0.5 flex-1 rounded ${i < activeStage ? "bg-tb-yellow" : "bg-white/15"}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Proven results — promoted to the top once available */}
       {phase === "results" && attribution && (
         <Card highlight>
-          <Badge>Step 4 · Proven results</Badge>
+          <Badge>Proven results · holdout-validated</Badge>
           <div className="mt-3 flex flex-col items-center py-5 text-center">
-            <div className="text-sm uppercase tracking-wide text-white/60">
-              Recovered revenue · holdout-validated
-            </div>
+            <div className="text-sm uppercase tracking-wide text-white/60">Recovered revenue</div>
             <div className="mt-1 font-display text-6xl text-tb-yellow drop-shadow-[0_0_30px_rgba(255,199,44,0.4)]">
               {inr(attribution.recovered_revenue)}
             </div>
@@ -615,32 +739,145 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
             {proposal && (
               <div className="mt-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/55">
                 Agent predicted{" "}
-                <b className="text-white/80">{inr(proposal.prediction.predicted_recovered_revenue)}</b>{" "}
-                · actual <b className="text-tb-yellow">{inr(attribution.recovered_revenue)}</b>
+                <b className="text-white/80">{inr(proposal.prediction.predicted_recovered_revenue)}</b> · actual{" "}
+                <b className="text-tb-yellow">{inr(attribution.recovered_revenue)}</b>
               </div>
             )}
           </div>
-
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Targeted conv." value={pct(attribution.targeted_conversion_rate)} />
             <Stat label="Holdout conv." value={pct(attribution.holdout_conversion_rate)} />
             <Stat label="Lift" value={pct(attribution.lift)} highlight />
             <Stat label="Incremental orders" value={attribution.incremental_conversions.toString()} />
           </div>
-
           {report && (
             <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3">
               <Label>Agent summary</Label>
               <p className="mt-1 whitespace-pre-wrap text-sm text-white/85">{report}</p>
             </div>
           )}
-
-          <div className="mt-5">
-            <Button variant="ghost" onClick={restart}>
-              ↻ Run another campaign
-            </Button>
-          </div>
         </Card>
+      )}
+
+      {/* Headline counters */}
+      {funnel && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Targeted" value={funnel.targeted.toLocaleString("en-IN")} />
+          <Stat label="Holdout (control)" value={funnel.holdout.toLocaleString("en-IN")} />
+          <Stat label="In queue" value={funnel.queued.toLocaleString("en-IN")} />
+          <Stat label="Clicked offer" value={funnel.clicked.toLocaleString("en-IN")} highlight />
+        </div>
+      )}
+
+      <div className="grid gap-5 lg:grid-cols-5">
+        {/* Funnel + channel split */}
+        <div className="space-y-5 lg:col-span-3">
+          {funnel && (
+            <Card>
+              <Label>Delivery funnel</Label>
+              <div className="mt-3 space-y-2">
+                {(
+                  [
+                    ["sent", "delivered"],
+                    ["delivered", "opened"],
+                    ["opened", "read"],
+                    ["read", "clicked"],
+                  ] as const
+                ).map(([from], idx) => {
+                  const order = ["sent", "delivered", "opened", "read", "clicked"] as const;
+                  const k = order[idx];
+                  return (
+                    <div key={k}>
+                      <div className="flex items-center justify-between text-xs text-white/50">
+                        <span className="capitalize">{k}</span>
+                        <span className="tabular-nums">
+                          {funnel[k].toLocaleString("en-IN")}
+                          {idx > 0 && (
+                            <span className="ml-1 text-white/35">
+                              ({rate(funnel[k], funnel[order[idx - 1]])}% of {order[idx - 1]})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-3 overflow-hidden rounded bg-white/10">
+                        <div
+                          className="h-full rounded bg-gradient-to-r from-tb-magenta to-tb-yellow transition-all duration-700"
+                          style={{ width: `${rate(funnel[k], funnel.targeted || 1)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {funnel.failed > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                      <span>Failed / bounced</span>
+                      <span className="tabular-nums">{funnel.failed}</span>
+                    </div>
+                    <div className="mt-1 h-3 overflow-hidden rounded bg-white/10">
+                      <div className="h-full rounded bg-red-500/70" style={{ width: `${rate(funnel.failed, funnel.targeted || 1)}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {Object.keys(channels).length > 0 && (
+            <Card>
+              <Label>Channels firing {costRouting && <span className="ml-1 text-tb-yellow">· cost routing on</span>}</Label>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {Object.entries(channels).map(([ch, n]) => (
+                  <div key={ch} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-tb-yellow">{ch}</div>
+                    <div className="mt-1 text-2xl font-bold tabular-nums">{n.toLocaleString("en-IN")}</div>
+                    <div className="text-[11px] text-white/40">recipients</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Live activity feed */}
+        <div className="lg:col-span-2">
+          <Card>
+            <Label>Live activity</Label>
+            <div className="mt-3 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+              {log.length === 0 ? (
+                <p className="text-sm text-white/40">Waiting for the first events…</p>
+              ) : (
+                log.map((e) => (
+                  <div
+                    key={e.id}
+                    className="animate-rise rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/80"
+                  >
+                    {e.text}
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Fast-forward CTA */}
+      {drained && phase === "launched" && (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-tb-yellow/40 bg-tb-yellow/[0.04] p-6 text-center">
+          <div className="text-sm text-white/70">
+            All messages are out. Jump ahead to see how many lapsed customers actually came back.
+          </div>
+          <button
+            onClick={onFastForward}
+            disabled={simulating}
+            className="rounded-full bg-tb-yellow px-9 py-4 text-lg font-bold text-black shadow-[0_0_50px_-12px] shadow-tb-yellow/70 transition hover:scale-[1.03] disabled:opacity-50"
+          >
+            {simulating ? "Measuring…" : "⏩ Fast-forward a week → measure results"}
+          </button>
+          <span className="text-xs text-white/50">
+            Simulates the following week, then measures incremental revenue vs the holdout control group.
+          </span>
+        </div>
       )}
     </div>
   );
