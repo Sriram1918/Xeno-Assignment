@@ -28,3 +28,6 @@ Thumbs.db
 # Misc
 *.log
 ci.py
+
+# Raw source assets (resized versions live in web/public)
+/src/

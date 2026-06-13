@@ -2,41 +2,40 @@
 
 import { useState } from "react";
 
-/** Taco Bell logo. Renders /logo.png if present; otherwise a styled wordmark fallback. */
+/** Taco Bell logo: bell mark (white badge) + wordmark. Falls back to a text wordmark. */
 export function Brandmark({ size = "md" }: { size?: "sm" | "md" }) {
   const [imgOk, setImgOk] = useState(true);
-  const h = size === "sm" ? "h-8" : "h-10";
+  const box = size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const text = size === "sm" ? "text-xl" : "text-2xl";
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2.5">
       {imgOk && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/logo.png"
+          src="/logo.jpg"
           alt="Taco Bell"
-          className={`${h} w-auto`}
+          className={`${box} rounded-lg object-contain`}
           onError={() => setImgOk(false)}
         />
       )}
-      {!imgOk && (
-        <span className={`font-display ${size === "sm" ? "text-xl" : "text-2xl"} uppercase tracking-wide`}>
-          Taco&nbsp;Bell
-        </span>
-      )}
+      <span className={`font-display ${text} uppercase tracking-wide`}>Taco&nbsp;Bell</span>
     </div>
   );
 }
 
-/** Optional decorative hero food image. Renders /hero.png if present; hides itself if missing. */
+/** Dramatic hero food shot (dark background blends into the page). Hides itself if missing. */
 export function HeroImage() {
   const [imgOk, setImgOk] = useState(true);
   if (!imgOk) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/hero.png"
-      alt=""
-      className="pointer-events-none mt-10 max-h-72 w-auto drop-shadow-[0_20px_60px_rgba(228,0,124,0.45)]"
-      onError={() => setImgOk(false)}
-    />
+    <div className="mt-12 w-full max-w-3xl">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero.jpg"
+        alt="A Taco Bell taco"
+        className="w-full rounded-2xl border border-white/10 shadow-[0_30px_80px_-20px_rgba(228,0,124,0.45)]"
+        onError={() => setImgOk(false)}
+      />
+    </div>
   );
 }
