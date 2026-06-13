@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="Taco Bell CRM", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Taco Bell CRM", version="0.5.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,6 +49,7 @@ from .api import (  # noqa: E402 - after app/middleware setup
     agent,
     campaigns,
     demo,
+    insights,
     receipts,
     segments,
 )
@@ -59,6 +60,7 @@ app.include_router(campaigns.router)
 app.include_router(receipts.router)
 app.include_router(agent.router)
 app.include_router(demo.router)
+app.include_router(insights.router)
 
 
 @app.get("/health")

@@ -16,12 +16,16 @@ from .funnels import funnel
 from .messaging import DEFAULT_TEMPLATES
 from .models import Campaign
 from .schemas import SegmentSpec
-from .segments import preview_segment
+from .segments import preview_segment, run_segment
+from .strategy import forecast
 
 # Model id comes from settings (gemini-1.5-flash by default — most reliable free tier).
 
-SEGMENT_PROMPT = """You are the targeting brain of a QSR marketing CRM for the brand "Taco Bell".
-Convert the marketer's goal into a JSON object with keys: "spec", "name", "rationale".
+SEGMENT_PROMPT = """You are the marketing strategist + targeting brain of a CRM for "Taco Bell".
+Convert the marketer's goal into a JSON object with keys:
+"spec", "name", "rationale", "offer", "strategy".
+- "offer": a concrete incentive to use (e.g. "20% off the next order", "Buy-one-get-one").
+- "strategy": ONE sentence of strategic advice — who to prioritise, which channel leans best, and why.
 
 "spec" is a SegmentSpec with these OPTIONAL fields (omit those you don't need):
 - last_order_days_gte (int): at least N days since last order (more lapsed/inactive)
@@ -96,8 +100,13 @@ def propose_campaign(session, goal: str) -> dict:
     spec = SegmentSpec.model_validate(seg_data.get("spec", seg_data))
     name = seg_data.get("name") or "Win-back campaign"
     rationale = seg_data.get("rationale") or ""
+    offer = seg_data.get("offer") or "20% off the next order"
+    strategy = seg_data.get("strategy") or ""
 
     preview = preview_segment(session, spec)
+    # Bold, defensible prediction made before any send.
+    customers = run_segment(session, spec)
+    prediction = forecast(customers)
 
     copy_resp = model.generate_content(
         COPY_PROMPT.format(goal=goal),
@@ -112,8 +121,11 @@ def propose_campaign(session, goal: str) -> dict:
         "goal": goal,
         "name": name,
         "rationale": rationale,
+        "offer": offer,
+        "strategy": strategy,
         "segment_spec": spec.model_dump(),
         "segment_preview": preview,
+        "prediction": prediction,
         "messages": messages,
     }
 
