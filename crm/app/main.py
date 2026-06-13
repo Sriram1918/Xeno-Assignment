@@ -48,6 +48,7 @@ from .api import (  # noqa: E402 - after app/middleware setup
     admin,
     agent,
     campaigns,
+    demo,
     receipts,
     segments,
 )
@@ -57,6 +58,7 @@ app.include_router(segments.router)
 app.include_router(campaigns.router)
 app.include_router(receipts.router)
 app.include_router(agent.router)
+app.include_router(demo.router)
 
 
 @app.get("/health")
