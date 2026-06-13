@@ -14,6 +14,8 @@
 |---|------------|-------------|
 | 1 | **Ingest & store shoppers + orders** | 2,500 realistic customers and ~18k orders, with denormalised RFM (recency/frequency/monetary) kept fresh. |
 | 2 | **Understand a goal in plain English** | An AI agent turns *"win back regulars who went quiet"* into a precise, **typed** audience definition. |
+| 2b | **Proactively surface opportunities** | Without being asked, the agent scans the base and recommends the top plays — each with a **predicted recovered revenue** — so the marketer decides *what to do*, not just *how*. |
+| 2c | **Predict the outcome before sending** | The agent commits to a **bold forecast** (expected incremental orders + recovered revenue) up front; results show predicted-vs-actual. |
 | 3 | **Segment shoppers** | Compiles that typed definition into a real, index-backed SQL query and previews exactly who it hits. |
 | 4 | **Draft personalised copy** | AI writes per-channel messages (WhatsApp / SMS / Email / RCS), personalised with name + favourite item. |
 | 5 | **Human approval gate** | The marketer reviews/edits the audience + copy and approves once before anything sends. |
@@ -23,6 +25,7 @@
 | 9 | **Prove the revenue (holdout)** | A random control group is held back; the system measures *incremental* lift → **recovered revenue**. |
 | 10 | **Narrate results** | The agent writes a plain-English summary grounded in the real funnel + attribution numbers. |
 | 11 | **Dashboard** | Lists all campaigns with status + engagement. |
+| 11b | **Customer insights (charts)** | A visual view of the base: lifecycle/RFM breakdown, revenue-at-risk, channel mix, spend distribution, top cities. |
 | 12 | **Reset demo** | One click restores the pristine dataset (for repeated reviewer testing). |
 
 ---
@@ -211,7 +214,9 @@ number is the headline of the UI's results card.
 | `worker.py` | **Outbox dispatcher** | Concurrent batch dispatch, retry+backoff, dead-letter; runs as a background task |
 | `funnels.py` | Funnel stats | Counts sent/delivered/opened/read/clicked/failed over the targeted set |
 | `attribution.py` | **Holdout lift** | Simulates conversions with a causal effect; computes incremental recovered revenue |
-| `api/*` | HTTP surface | admin / segments / campaigns / receipts / agent / demo routers |
+| `insights.py` | **Analytics** | Lifecycle/RFM, revenue-at-risk, channel/spend/city aggregates for the charts |
+| `strategy.py` | **Strategist** | Pre-send revenue forecast + proactive opportunity scan |
+| `api/*` | HTTP surface | admin / segments / campaigns / receipts / agent / demo / insights routers |
 
 ### Channel stub (`channel/`, FastAPI on Railway)
 - `POST /send` — accepts a send, ~8% transient 503 (to exercise retries), else schedules simulation.
@@ -269,8 +274,10 @@ number is the headline of the UI's results card.
 
 | Method & path | Purpose |
 |---------------|---------|
-| `POST /agent/plan` | Goal → typed segment + live preview + AI copy (no send) |
+| `POST /agent/plan` | Goal → typed segment + live preview + AI copy + **strategy/offer/predicted revenue** (no send) |
 | `POST /agent/report/{id}` | Plain-English results narrative (grounded in real numbers) |
+| `GET /strategy/opportunities` | Proactive scan: top plays in the base, each with a revenue forecast |
+| `GET /insights` | Customer-base analytics (lifecycle, revenue-at-risk, channels, spend, cities) for the dashboard charts |
 | `GET /agent/models` | Diagnostic: which Gemini models the key can use |
 | `POST /segments/preview` | Validate a `SegmentSpec` against live data (no send) |
 | `POST /campaigns` | Create a **draft** campaign |

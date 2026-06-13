@@ -63,6 +63,8 @@ Xeno-Assignment/
 │   │   ├── worker.py         # Outbox dispatcher (retries, backoff, dead-letter)
 │   │   ├── funnels.py        # Shared funnel computation
 │   │   ├── attribution.py    # Holdout-validated attribution + conversion simulation
+│   │   ├── insights.py       # Customer analytics for the dashboard charts
+│   │   ├── strategy.py       # Revenue forecast + proactive opportunity scan
 │   │   ├── agent.py          # Gemini agent: goal -> segment + copy + report
 │   │   └── api/
 │   │       ├── admin.py      # seed / reset / recreate / stats / dbcheck
@@ -304,6 +306,9 @@ Tables:
 - **`demo.py`** — `POST /demo/reset` (**public**, no token): clears campaigns/comms/receipts and
   regenerates customers + orders, so a reviewer can restore the pristine demo story from the UI
   after win-back campaigns have moved customers out of the lapsed segment.
+- **`insights.py`** — `GET /insights` (analytics for charts) and `GET /strategy/opportunities`
+  (the proactive scan: top plays + revenue forecasts). The enriched `POST /agent/plan` now also
+  returns the agent's **strategy**, **offer**, and a **predicted recovered-revenue forecast**.
 
 ---
 
