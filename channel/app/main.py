@@ -18,7 +18,7 @@ import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title="Taco Town Channel Stub", version="0.2.0")
+app = FastAPI(title="Taco Bell Channel Stub", version="0.2.0")
 
 # Funnel probabilities (each conditional on the previous step).
 P_DELIVERED = 0.92
@@ -112,7 +112,7 @@ def health():
 @app.get("/")
 def root():
     return {
-        "service": "Taco Town Channel Stub",
+        "service": "Taco Bell Channel Stub",
         "note": "Simulates WhatsApp/SMS/Email/RCS delivery. No real messages sent.",
         "health": "/health",
     }

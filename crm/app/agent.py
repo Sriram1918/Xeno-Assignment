@@ -20,7 +20,7 @@ from .segments import preview_segment
 
 # Model id comes from settings (gemini-1.5-flash by default — most reliable free tier).
 
-SEGMENT_PROMPT = """You are the targeting brain of a QSR marketing CRM for the brand "Taco Town".
+SEGMENT_PROMPT = """You are the targeting brain of a QSR marketing CRM for the brand "Taco Bell".
 Convert the marketer's goal into a JSON object with keys: "spec", "name", "rationale".
 
 "spec" is a SegmentSpec with these OPTIONAL fields (omit those you don't need):
@@ -44,7 +44,7 @@ Guidance:
 
 Return ONLY the JSON object. Marketer goal: "{goal}" """
 
-COPY_PROMPT = """Write short, warm win-back marketing messages for "Taco Town", a fun, fast-casual
+COPY_PROMPT = """Write short, warm win-back marketing messages for "Taco Bell", a fun, fast-casual
 taco/Mexican QSR brand. Use ONLY these placeholders: {{name}}, {{favorite_item}}, {{brand}}.
 Include a clear, appealing offer. Tone: friendly and a little playful.
 - whatsapp: 1-2 short sentences, may use one emoji.
@@ -56,7 +56,7 @@ Use plain ASCII only — no emoji and no curly/smart quotes (use straight ' and 
 Return ONLY a JSON object with keys "whatsapp", "sms", "email", "rcs".
 Campaign goal: "{goal}" """
 
-REPORT_PROMPT = """You are a marketing analyst for "Taco Town". In 3-4 friendly sentences, summarise
+REPORT_PROMPT = """You are a marketing analyst for "Taco Bell". In 3-4 friendly sentences, summarise
 this win-back campaign for a busy growth marketer. Lead with the recovered (incremental) revenue and
 make clear it was validated against a holdout control group (so it's real lift, not a guess). Mention
 the engagement funnel briefly. Be concrete with the numbers; do not invent any.

@@ -1,11 +1,11 @@
-# Taco Town — Agentic Win-Back CRM
+# Taco Bell — Agentic Win-Back CRM
 
 An AI-native mini CRM that helps a QSR / restaurant brand **win back lapsed shoppers**. A growth
 marketer describes a goal in plain English; an AI agent finds the right shoppers, drafts
 personalised per-channel copy, sends it through a self-built async channel service, and reports
 back **provably recovered revenue** (validated with a holdout/control group).
 
-> "Taco Town" is a fictional demo brand with simulated data. It mirrors the kind of win-back /
+> This is an **unaffiliated engineering demo** themed as Taco Bell, with fully simulated data. It mirrors the kind of win-back /
 > dormant-reactivation results Xeno drives for real QSR clients (e.g. Taco Bell, Biryani By Kilo).
 
 ## 🔗 Live

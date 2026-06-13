@@ -2,7 +2,7 @@
 
 from .models import Channel, Customer
 
-BRAND = "Taco Town"
+BRAND = "Taco Bell"
 
 # Sensible per-channel defaults used when the agent (or marketer) doesn't supply copy.
 # Channel tone differs: WhatsApp/RCS are short and emoji-friendly, Email is longer.

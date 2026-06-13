@@ -1,4 +1,4 @@
-"""Realistic QSR data generator for "Taco Town" (fictional demo brand, simulated data).
+"""Realistic QSR data generator for "Taco Bell" (fictional demo brand, simulated data).
 
 We don't just sprinkle random orders — we generate distinct customer *cohorts* so the product
 has a genuine win-back story to act on. The headline cohort is "lapsing regulars": shoppers who

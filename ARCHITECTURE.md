@@ -1,10 +1,15 @@
-# Taco Town — Architecture & Design Rationale (Project State)
+# Taco Bell — Architecture & Design Rationale (Project State)
 
 > A complete, file-by-file explanation of what's built, **why**, what we deliberately did **not**
 > do, and the **alternatives** considered. Written so every decision can be defended live.
 >
-> **Brand:** "Taco Town" — a fictional QSR demo brand with fully simulated data. It mirrors the
-> win-back / dormant-reactivation results Xeno drives for real clients (Taco Bell, Biryani By Kilo).
+> **Brand:** an **unaffiliated engineering demo** themed as **Taco Bell** with fully simulated data
+> (a small "unofficial demo" disclaimer is shown in-product). It mirrors the win-back / dormant-
+> reactivation results Xeno drives for real QSR clients (Taco Bell, Biryani By Kilo).
+>
+> **Live:** app → https://xeno-assignment-lyart.vercel.app · CRM →
+> https://xeno-assignment-production-8c54.up.railway.app · channel →
+> https://surprising-trust-production-b6e7.up.railway.app
 >
 > **The product:** an **AI-native agentic win-back CRM**. A growth marketer states a goal in plain
 > English → an AI agent finds the right lapsed shoppers, drafts personalised per-channel copy, sends
@@ -34,8 +39,8 @@ brain, returning **structured** output we execute deterministically — not a bo
 | **PostgreSQL (Railway)** | Real relational DB, indexed segmentation queries, durable outbox | SQLite (no concurrency story); MongoDB (relational data here — customers↔orders) |
 | **DB-backed outbox + in-process worker** | Models the brief's async loop with **zero extra infra**, easy to reason about, durable | Redis/Celery or a broker (better at scale, but operational overhead not worth it for this scope — stated as an explicit tradeoff) |
 | **Two separate services (CRM + channel)** | The brief explicitly wants the channel stubbed as a **separate service** with callbacks | Single service faking it internally (loses the real network/callback story) |
-| **Google Gemini (free tier)** | Free, no card, native structured-JSON output ideal for typed `SegmentSpec` | Claude/OpenAI (paid — candidate can't pay); local model (no GPU on free Railway). *Would use Claude in production.* |
-| **Next.js on Vercel** (frontend, pending) | Fastest path to a clean chat + dashboard demo, free hosting | Server-rendered Jinja/HTMX (less polished for a video-graded submission) |
+| **Google Gemini (free tier), `models/gemini-3.1-flash-lite`** | Free, no card, structured-JSON output ideal for the typed `SegmentSpec`. This key's only models with free quota are 2.5/3.x; 3.1-flash-lite has the best allowance (15 RPM / **500 req/day**, resets daily). | gemini-2.0-flash (0 free quota → 429); gemini-1.5-flash (not on this account → 404); Claude/OpenAI (paid). *Would use Claude in production; the agent is one swappable client.* |
+| **Next.js on Vercel** (frontend, **deployed**) | Fastest path to a polished landing + app demo, free hosting; `NEXT_PUBLIC_CRM_URL` baked at build | Server-rendered Jinja/HTMX (less polished for a video-graded submission) |
 | **Railway Hobby ($5)** | Always-on, no cold starts, two services + DB in one place | Free tiers that sleep (would risk a dead link when reviewers check in week 2) |
 
 ---
@@ -64,12 +69,22 @@ Xeno-Assignment/
 │   │       ├── segments.py   # /segments/preview
 │   │       ├── campaigns.py  # create / launch / stats / simulate / attribution
 │   │       ├── receipts.py   # channel callbacks (idempotent, out-of-order safe)
-│   │       └── agent.py      # /agent/plan, /agent/report
+│   │       ├── agent.py      # /agent/plan, /agent/report, /agent/models
+│   │       └── demo.py       # /demo/reset (public — restore pristine demo data)
 │   ├── requirements.txt
 │   └── Procfile              # uvicorn start command for Railway
 ├── channel/                  # Stubbed channel service (FastAPI)
 │   └── app/main.py           # /send + async outcome simulation + callbacks
-├── web/                      # (pending) Next.js frontend
+├── web/                      # Next.js frontend (Vercel)
+│   ├── app/
+│   │   ├── page.tsx          # Landing page (brand hero + "Start the demo")
+│   │   ├── app/page.tsx      # The product (agent flow + dashboard + reset)
+│   │   ├── layout.tsx        # Fonts (Anton/Inter), metadata
+│   │   └── globals.css       # Brand gradient background
+│   ├── components/Brand.tsx  # Logo + hero image (graceful fallbacks)
+│   ├── lib/api.ts            # Typed CRM API client
+│   ├── public/               # logo.jpg, hero.jpg (resized), logo-retro.jpg
+│   └── tailwind.config.js    # Taco Bell palette
 ├── README.md  PLAN.md  UNDERSTANDING.md  ARCHITECTURE.md
 ```
 
@@ -253,7 +268,12 @@ Tables:
 - **Why structured output + `response_mime_type=application/json`:** reliable, parseable, validated by
   `SegmentSpec`. The model owns *who* and *what to say*; the deterministic system owns *execution and
   measurement*. That's the "AI woven in, not bolted on" stance.
-- **Why Gemini:** free tier, no card, strong JSON mode. **Would use Claude in production** (stated).
+- **Model:** `models/gemini-3.1-flash-lite`, configurable via the `GEMINI_MODEL` env var. Chosen
+  because this account's free quota only covers 2.5/3.x models and 3.1-flash-lite has the highest
+  allowance (**500 req/day**, resets daily) — easily enough for reviewers to test repeatedly.
+- **Copy is ASCII-only by instruction** to avoid emoji/curly-quote mojibake from the model output.
+- **Why Gemini:** free tier, no card, strong JSON mode. **Would use Claude in production** (the agent
+  is a single swappable client) — stated tradeoff.
 
 ### `main.py` — app wiring
 - **`lifespan`** — on startup: register models + `init_db()` (defensive: a cold DB never takes down
@@ -278,8 +298,12 @@ Tables:
     **backfill timestamps** + advance status only when rank increases.
   - **`receive`** — inserts the `ReceiptEvent` and **flushes**; an `IntegrityError` (duplicate
     `event_id`) → `duplicate_ignored`. Otherwise applies the transition atomically.
-- **`agent.py`** — `POST /agent/plan` (propose), `POST /agent/report/{id}`; LLM/parse errors surface
-  as clean 502/503, never a stack trace.
+- **`agent.py`** — `POST /agent/plan` (propose), `POST /agent/report/{id}`, `GET /agent/models`
+  (diagnostic: which models the key can use); LLM/parse errors surface as clean 502/503, never a
+  stack trace.
+- **`demo.py`** — `POST /demo/reset` (**public**, no token): clears campaigns/comms/receipts and
+  regenerates customers + orders, so a reviewer can restore the pristine demo story from the UI
+  after win-back campaigns have moved customers out of the lapsed segment.
 
 ---
 
@@ -295,6 +319,34 @@ A separate FastAPI app that **delivers nothing** and simulates reality:
   time **duplicates** an event (same `event_id`).
 - **Why inject failures/dupes/reordering:** it makes the CRM's robustness *real and demonstrable*,
   not theoretical. This is precisely the "volume, ordering, retries, failures" the brief asks to see.
+
+---
+
+## 4b. The web frontend (`web/`, Next.js on Vercel)
+
+A small, deliberately-polished Next.js (App Router, TypeScript, Tailwind) app — the presentation
+layer that turns the engine into something a marketer (and a reviewer) wants to use.
+
+- **`app/page.tsx` — landing page.** A bold, brand-themed hero (Anton display font, Taco Bell
+  purple→magenta gradient, the dramatic taco hero image), a one-line value prop, a **"Start the
+  demo"** CTA into `/app`, and three feature cards. First impression = a real product, not a form.
+- **`app/app/page.tsx` — the product.** The whole agent journey in one screen:
+  1. an **at-risk banner** (live `GET /admin/stats`) so it's never empty — *"564 regulars have gone
+     quiet · ₹18.4L at risk"*;
+  2. **Step 1** type a goal → `POST /agent/plan`;
+  3. **Step 2** the proposal: audience size, value, channel mix, sample customers, **editable**
+     AI-drafted copy, holdout %;
+  4. **Step 3** approve → `POST /campaigns` + `/launch`, then a **live funnel** that polls
+     `/campaigns/{id}/stats` every 2s;
+  5. **Step 4** *"fast-forward a week"* → `/simulate-conversions` + `/attribution` + `/agent/report`
+     → the **recovered-revenue** reveal.
+  Plus a **Dashboard** tab and a **"Reset demo"** button (`POST /demo/reset`).
+- **`components/Brand.tsx`** — logo + hero image with graceful fallbacks (a missing image degrades to
+  a text wordmark / is hidden, never a broken icon).
+- **`lib/api.ts`** — a typed client; base URL from `NEXT_PUBLIC_CRM_URL` (baked at build).
+- **Images** are resized at build-prep (8MB hero → ~195KB) so the page stays fast.
+- **Why a real landing + vibrant app:** "creativity in scoping" and "thought clarity & communication"
+  are explicitly graded. An empty form reads as boring; this makes the depth underneath *land*.
 
 ---
 
@@ -355,6 +407,7 @@ Holdout lift → incremental orders → RECOVERED REVENUE   (+ /agent/report nar
 - [x] Async engine: outbox, concurrent dispatch, retries+backoff+dead-letter, idempotent +
       out-of-order receipts, state machine (verified end-to-end)
 - [x] Holdout-validated attribution → recovered revenue (verified: ~₹16.5k, 11.3% vs 2.0%)
-- [x] AI agent code (Gemini): plan + report (awaiting `GEMINI_API_KEY` on Railway to test)
-- [ ] Next.js frontend (chat + dashboard) on Vercel
-- [ ] Final pristine seed, smoke test, walkthrough video
+- [x] AI agent live (Gemini `gemini-3.1-flash-lite`): NL goal → typed `SegmentSpec` + copy + report
+- [x] Next.js frontend on Vercel — branded landing + vibrant app + reset (live, wired to CRM)
+- [x] `POST /demo/reset` so reviewers can restore the pristine demo story
+- [ ] Record the 5–6 min walkthrough video (reseed beforehand) and submit

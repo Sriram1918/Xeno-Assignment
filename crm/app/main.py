@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="Taco Town CRM", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Taco Bell CRM", version="0.4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,4 +68,4 @@ def health():
 
 @app.get("/")
 def root():
-    return {"service": "Taco Town CRM", "docs": "/docs", "health": "/health"}
+    return {"service": "Taco Bell CRM", "docs": "/docs", "health": "/health"}

@@ -1,4 +1,4 @@
-"""Database models for the Taco Town CRM.
+"""Database models for the Taco Bell CRM.
 
 Design note: we keep classic RFM fields (recency / frequency / monetary) denormalised
 on the Customer row — `last_order_at`, `order_count`, `lifetime_value` — and refresh them
