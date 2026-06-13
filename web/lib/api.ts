@@ -136,9 +136,9 @@ export const api = {
     body: JSON.stringify(p),
   }),
 
-  launch: (id: string) =>
+  launch: (id: string, channelStrategy: "preferred" | "cost" = "preferred") =>
     req<{ status: string; campaign_id: string; audience_size: number; targeted: number; holdout: number }>(
-      `/campaigns/${id}/launch`,
+      `/campaigns/${id}/launch?channel_strategy=${channelStrategy}`,
       { method: "POST" },
     ),
 

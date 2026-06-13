@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Brandmark } from "@/components/Brand";
 import { Insights } from "@/components/Insights";
 import { Onboarding } from "@/components/Onboarding";
-import { Strategies } from "@/components/Strategies";
 import {
   api,
   Attribution,
@@ -19,7 +18,7 @@ import {
 } from "@/lib/api";
 
 export default function AppPage() {
-  const [view, setView] = useState<"agent" | "insights" | "strategies" | "dashboard">("agent");
+  const [view, setView] = useState<"agent" | "insights" | "dashboard">("agent");
   const [stats, setStats] = useState<DemoStats | null>(null);
   const [resetting, setResetting] = useState(false);
   const [flowKey, setFlowKey] = useState(0);
@@ -65,7 +64,7 @@ export default function AppPage() {
         </div>
         <div className="flex items-center gap-2">
           <nav className="flex gap-1 rounded-lg border border-white/15 bg-white/5 p-1 text-sm">
-            {(["agent", "insights", "strategies", "dashboard"] as const).map((v) => (
+            {(["agent", "insights", "dashboard"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -123,9 +122,11 @@ export default function AppPage() {
       </div>
 
       <div className="mt-5">
-        {view === "agent" && <AgentFlow key={flowKey} onChange={loadStats} />}
+        {/* Kept mounted so the agent's in-progress campaign/funnel survives tab switches */}
+        <div className={view === "agent" ? "" : "hidden"}>
+          <AgentFlow key={flowKey} onChange={loadStats} />
+        </div>
         {view === "insights" && <Insights />}
-        {view === "strategies" && <Strategies />}
         {view === "dashboard" && <Dashboard />}
       </div>
 
@@ -137,6 +138,25 @@ export default function AppPage() {
 }
 
 type Phase = "idle" | "proposed" | "launched" | "results";
+
+// Static per-channel copy variants by tone (no AI call). "Standard" uses the agent's draft.
+const TONE_TEMPLATES: Record<string, Record<string, string>> = {
+  Urgency: {
+    whatsapp: "{name}, today only: 30% off your favourite {favorite_item} at {brand}. Order in the next 2 hours!",
+    sms: "{name}, 30% off {favorite_item} at {brand} - today only. Order now.",
+    email:
+      "Hi {name},\n\nToday only: 30% off your favourite {favorite_item} at {brand}. Offer ends at midnight - don't miss it.\n\nTeam {brand}",
+    rcs: "Hurry {name}! 30% off {favorite_item} at {brand}, today only. Tap to order.",
+  },
+  "Loss-aversion": {
+    whatsapp:
+      "Hi {name}, we've added a FREE {favorite_item} to your {brand} account - but it expires in 48 hours. Claim it before it's gone!",
+    sms: "{name}, a FREE {favorite_item} is waiting in your {brand} account. It expires in 48h - don't lose it.",
+    email:
+      "Hi {name},\n\nBecause you're a valued regular, we've credited a FREE {favorite_item} to your {brand} account. Heads up - it expires in 48 hours, so claim it before it's gone.\n\nTeam {brand}",
+    rcs: "{name}, your FREE {favorite_item} at {brand} expires in 48 hours. Tap to claim it now!",
+  },
+};
 
 function AgentFlow({ onChange }: { onChange: () => void }) {
   const EXAMPLES = [
@@ -157,6 +177,14 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
   const [holdout, setHoldout] = useState(10);
   const [language, setLanguage] = useState("English");
   const [tone, setTone] = useState("Standard");
+  const [costRouting, setCostRouting] = useState(false);
+
+  // Tone really rewrites the copy (static variants — no AI call). Standard = the AI's draft.
+  const applyTone = (t: string) => {
+    setTone(t);
+    if (!proposal) return;
+    setMessages(t === "Standard" ? proposal.messages : TONE_TEMPLATES[t] ?? proposal.messages);
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setAnalyzing(false), 1300); // brief "analyzing" beat (no API)
@@ -201,7 +229,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
         holdout_percent: holdout,
       });
       const id = created.campaign.id;
-      await api.launch(id);
+      await api.launch(id, costRouting ? "cost" : "preferred");
       setCampaignId(id);
       setPhase("launched");
     } catch (e) {
@@ -447,65 +475,87 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
           </div>
 
           {phase === "proposed" && (
-            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.02] p-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
-                Smart delivery options
+            <div className="mt-5 rounded-2xl border border-tb-yellow/40 bg-tb-yellow/[0.04] p-5">
+              <div className="text-sm font-semibold uppercase tracking-wide text-tb-yellow">
+                Launch setup — pick your add-ons
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                <label className="flex items-center gap-2 text-white/65">
-                  Language
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="rounded border border-white/15 bg-black/30 px-2 py-1 text-white outline-none"
-                  >
-                    {["English", "Hindi", "Hinglish", "Tamil", "Telugu"].map((l) => (
-                      <option key={l}>{l}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 text-white/65">
-                  Tone
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Tone (rewrites copy)</span>
                   <select
                     value={tone}
-                    onChange={(e) => setTone(e.target.value)}
-                    className="rounded border border-white/15 bg-black/30 px-2 py-1 text-white outline-none"
+                    onChange={(e) => applyTone(e.target.value)}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
                   >
                     {["Standard", "Urgency", "Loss-aversion"].map((t) => (
                       <option key={t}>{t}</option>
                     ))}
                   </select>
                 </label>
-                <span className="rounded-full bg-tb-magenta/15 px-2.5 py-1 text-[11px] font-medium text-tb-yellow">
-                  + channel-cost routing
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Language (preview)</span>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
+                  >
+                    {["English", "Hindi", "Hinglish", "Tamil", "Telugu"].map((l) => (
+                      <option key={l}>{l}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Holdout %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={holdout}
+                    onChange={(e) => setHoldout(Number(e.target.value))}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-center text-white outline-none"
+                  />
+                </label>
+              </div>
+
+              <label className="mt-3 flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={costRouting}
+                  onChange={(e) => setCostRouting(e.target.checked)}
+                  className="h-4 w-4 accent-tb-yellow"
+                />
+                <span>
+                  <b>Channel-cost routing</b> — send low-value customers via free Email instead of paid WhatsApp
+                </span>
+              </label>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-white/40">Also available:</span>
+                {["⏰ Cart-timing", "🌦️ Weather-aware", "📅 Payday-cycle"].map((s) => (
+                  <span
+                    key={s}
+                    title="Platform capability — uses live data feeds in production"
+                    className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/55"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button
+                  onClick={approveAndLaunch}
+                  disabled={loading}
+                  className="rounded-full bg-tb-yellow px-10 py-4 text-lg font-bold text-black shadow-[0_0_50px_-12px] shadow-tb-yellow/70 transition hover:scale-[1.03] disabled:opacity-50"
+                >
+                  {loading ? "Launching…" : "✓ Approve & launch campaign"}
+                </button>
+                <span className="text-xs text-white/50">
+                  A random {holdout}% is held back as a control group to prove real lift
+                  {costRouting ? " · cost routing on" : ""}.
                 </span>
               </div>
-              <p className="mt-1.5 text-[11px] text-white/40">
-                The platform adapts copy to the chosen language &amp; tone and routes low-value
-                customers to free Email at send time. (Capability preview — see the Strategies tab.)
-              </p>
-            </div>
-          )}
-
-          {phase === "proposed" && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <label className="text-sm text-white/65">
-                Holdout %
-                <input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={holdout}
-                  onChange={(e) => setHoldout(Number(e.target.value))}
-                  className="ml-2 w-16 rounded border border-white/15 bg-black/30 p-1 text-center"
-                />
-              </label>
-              <Button onClick={approveAndLaunch} disabled={loading}>
-                {loading ? "Launching…" : "✓ Approve & launch"}
-              </Button>
-              <span className="text-xs text-white/50">
-                A random {holdout}% is held back as a control group to prove real lift.
-              </span>
             </div>
           )}
         </Card>
@@ -590,6 +640,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
 function Dashboard() {
   const [rows, setRows] = useState<CampaignRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<CampaignRow | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -602,6 +653,18 @@ function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  if (selected) {
+    return (
+      <CampaignDetail
+        campaign={selected}
+        onBack={() => {
+          setSelected(null);
+          load();
+        }}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -626,16 +689,22 @@ function Dashboard() {
                 <th className="p-2 text-right">Audience</th>
                 <th className="p-2 text-right">Clicked</th>
                 <th className="p-2 text-right">Holdout</th>
+                <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((c) => (
-                <tr key={c.id} className="border-t border-white/10">
-                  <td className="p-2">{c.name}</td>
+                <tr
+                  key={c.id}
+                  onClick={() => setSelected(c)}
+                  className="cursor-pointer border-t border-white/10 transition hover:bg-white/5"
+                >
+                  <td className="p-2 font-medium">{c.name}</td>
                   <td className="p-2 capitalize text-white/60">{c.status}</td>
                   <td className="p-2 text-right">{c.audience_size}</td>
                   <td className="p-2 text-right">{c.funnel?.clicked ?? "—"}</td>
                   <td className="p-2 text-right">{c.holdout_size}</td>
+                  <td className="p-2 text-right text-tb-yellow">View →</td>
                 </tr>
               ))}
             </tbody>
@@ -643,6 +712,109 @@ function Dashboard() {
         </div>
       )}
     </Card>
+  );
+}
+
+function CampaignDetail({ campaign, onBack }: { campaign: CampaignRow; onBack: () => void }) {
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
+  const [attr, setAttr] = useState<Attribution | null>(null);
+  const [simulating, setSimulating] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const tick = async () => {
+      try {
+        const f = await api.stats(campaign.id);
+        if (active) setFunnel(f);
+      } catch {
+        /* ignore */
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 2500);
+    return () => {
+      active = false;
+      clearInterval(iv);
+    };
+  }, [campaign.id]);
+
+  useEffect(() => {
+    if (campaign.conversions_simulated) api.attribution(campaign.id).then(setAttr).catch(() => {});
+  }, [campaign.id, campaign.conversions_simulated]);
+
+  const fastForward = async () => {
+    setSimulating(true);
+    try {
+      await api.simulate(campaign.id);
+      setAttr(await api.attribution(campaign.id));
+    } catch {
+      /* ignore */
+    } finally {
+      setSimulating(false);
+    }
+  };
+
+  const drained = funnel && funnel.queued === 0 && funnel.sent > 0;
+
+  return (
+    <div className="space-y-5">
+      <button onClick={onBack} className="text-sm text-white/60 hover:text-white">
+        ← All campaigns
+      </button>
+
+      <Card>
+        <Badge>{campaign.status === "launched" ? "Live campaign" : "Campaign"}</Badge>
+        <h2 className="mt-2 font-display text-2xl uppercase tracking-wide">{campaign.name}</h2>
+        <p className="mt-1 text-sm capitalize text-white/60">
+          {campaign.status} · {campaign.audience_size} audience · {campaign.holdout_size} holdout
+        </p>
+
+        {funnel ? (
+          <>
+            <div className="mt-4 space-y-1">
+              {(["sent", "delivered", "opened", "read", "clicked"] as const).map((k) => (
+                <Bar key={k} label={k} value={funnel[k]} total={funnel.targeted || 1} />
+              ))}
+              {funnel.failed > 0 && (
+                <Bar label="failed/bounced" value={funnel.failed} total={funnel.targeted || 1} danger />
+              )}
+            </div>
+            {drained && !attr && (
+              <div className="mt-5">
+                <Button onClick={fastForward} disabled={simulating}>
+                  {simulating ? "Measuring…" : "⏩ Fast-forward a week → measure results"}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="mt-4 text-sm text-white/50">Loading funnel…</p>
+        )}
+      </Card>
+
+      {attr && (
+        <Card highlight>
+          <Badge>Proven results</Badge>
+          <div className="mt-3 flex flex-col items-center py-5 text-center">
+            <div className="text-sm uppercase tracking-wide text-white/60">
+              Recovered revenue · holdout-validated
+            </div>
+            <div className="mt-1 font-display text-6xl text-tb-yellow drop-shadow-[0_0_30px_rgba(255,199,44,0.4)]">
+              {inr(attr.recovered_revenue)}
+            </div>
+            <div className="mt-2 text-xs text-white/50">
+              vs {inr(attr.gross_attributed_revenue)} naive attribution — we only claim true, caused lift
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Targeted conv." value={pct(attr.targeted_conversion_rate)} />
+            <Stat label="Holdout conv." value={pct(attr.holdout_conversion_rate)} />
+            <Stat label="Lift" value={pct(attr.lift)} highlight />
+            <Stat label="Incremental orders" value={attr.incremental_conversions.toString()} />
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
 
