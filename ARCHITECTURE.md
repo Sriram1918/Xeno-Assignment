@@ -79,15 +79,20 @@ Xeno-Assignment/
 │   └── app/main.py           # /send + async outcome simulation + callbacks
 ├── web/                      # Next.js frontend (Vercel)
 │   ├── app/
-│   │   ├── page.tsx          # Landing page (brand hero + "Start the demo")
-│   │   ├── app/page.tsx      # The product (agent flow + dashboard + reset)
+│   │   ├── page.tsx          # Platform home — "Reach" multi-brand CRM (category grid)
+│   │   ├── taco-bell/page.tsx# Taco Bell brand landing (hero + "Start the demo")
+│   │   ├── app/page.tsx      # The product (agent flow + live ops + insights + dashboard)
 │   │   ├── layout.tsx        # Fonts (Anton/Inter), metadata
 │   │   └── globals.css       # Brand gradient background
-│   ├── components/Brand.tsx  # Logo + hero image (graceful fallbacks)
+│   ├── components/
+│   │   ├── Brand.tsx         # Logo + hero image (graceful fallbacks)
+│   │   ├── Insights.tsx      # Customer-analytics dashboard (lifecycle, channels, cities)
+│   │   ├── Charts.tsx        # Dependency-free SVG/CSS Donut + BarList
+│   │   └── Onboarding.tsx    # First-visit welcome overlay (localStorage-gated)
 │   ├── lib/api.ts            # Typed CRM API client
 │   ├── public/               # logo.jpg, hero.jpg (resized), logo-retro.jpg
 │   └── tailwind.config.js    # Taco Bell palette
-├── README.md  PLAN.md  UNDERSTANDING.md  ARCHITECTURE.md
+├── README.md  PLAN.md  UNDERSTANDING.md  ARCHITECTURE.md  CAPABILITIES.md
 ```
 
 **Why a monorepo with two service folders:** keeps the two deployables together (one repo to review)
@@ -332,25 +337,62 @@ A separate FastAPI app that **delivers nothing** and simulates reality:
 A small, deliberately-polished Next.js (App Router, TypeScript, Tailwind) app — the presentation
 layer that turns the engine into something a marketer (and a reviewer) wants to use.
 
-- **`app/page.tsx` — landing page.** A bold, brand-themed hero (Anton display font, Taco Bell
-  purple→magenta gradient, the dramatic taco hero image), a one-line value prop, a **"Start the
-  demo"** CTA into `/app`, and three feature cards. First impression = a real product, not a form.
-- **`app/app/page.tsx` — the product.** The whole agent journey in one screen:
-  1. an **at-risk banner** (live `GET /admin/stats`) so it's never empty — *"564 regulars have gone
-     quiet · ₹18.4L at risk"*;
-  2. **Step 1** type a goal → `POST /agent/plan`;
-  3. **Step 2** the proposal: audience size, value, channel mix, sample customers, **editable**
-     AI-drafted copy, holdout %;
-  4. **Step 3** approve → `POST /campaigns` + `/launch`, then a **live funnel** that polls
-     `/campaigns/{id}/stats` every 2s;
-  5. **Step 4** *"fast-forward a week"* → `/simulate-conversions` + `/attribution` + `/agent/report`
-     → the **recovered-revenue** reveal.
-  Plus a **Dashboard** tab and a **"Reset demo"** button (`POST /demo/reset`).
+- **`app/page.tsx` — platform home ("Reach").** The product is framed as a **multi-brand customer-
+  engagement platform**, not a one-off Taco Bell page. A category grid (Food & Beverage, Fashion &
+  Apparel, Beauty & Wellness) lists **real Xeno client verticals & brands**; only **Taco Bell** is a
+  **live, built-out workspace** (badged "LIVE DEMO" → `/taco-bell`), the rest read "Workspace ready".
+  - **Why:** the brief asks for a CRM, not a Taco Bell site. The platform framing shows the engine is
+    brand-agnostic (Taco Bell is just the seeded tenant) and is honest about what's actually built.
+    A disclaimer notes brands are trademarks of their owners, used for an unaffiliated demo.
+- **`app/taco-bell/page.tsx` — brand landing.** The bold brand-themed hero (Anton display font,
+  purple→magenta gradient, the taco hero image), one-line value prop, **"Start the demo"** CTA into
+  `/app`, three feature cards, and a "← All brands" link back to the platform home.
+- **`app/app/page.tsx` — the product.** Three tabs (**Agent · Insights · Dashboard**) under a live
+  **at-risk banner** (`GET /admin/stats`, never empty — *"564 regulars have gone quiet · ₹18.4L at
+  risk"*). The agent flow is kept **mounted across tab switches** (CSS-hidden, not unmounted) so an
+  in-progress campaign survives navigating away and back.
+  - **Agent tab — the journey:**
+    1. **Proactive opportunities** — on load, `GET /strategy/opportunities` shows the top win-back
+       *plays* the agent already found (audience size + **predicted recovered revenue**), each a
+       one-click goal. A brief "analyzing 2,500 customers" beat sets the agentic tone.
+    2. **Step 1** type a goal (or click a play) → `POST /agent/plan`.
+    3. **Step 2 — proposal:** name, rationale, the agent's **strategy** + **offer** + a **predicted
+       recovered-revenue forecast**; audience size, value-at-risk, channel mix, sample customers; and
+       a **Launch setup** card sitting right under the metrics (no long scroll) with real **add-ons**:
+       - **Tone** (Standard / Urgency / Loss-aversion) — *actually rewrites* all per-channel copy via
+         static templates (zero AI calls, so it never burns quota);
+       - **Channel-cost routing** — a real backend toggle: low-LTV customers are routed to **free
+         Email** instead of paid WhatsApp (`?channel_strategy=cost` on launch);
+       - **Holdout %**, a **Language** preview selector, and three "also on this platform" capability
+         cards (Cart-timing / Weather-aware / Payday-cycle) each with a one-line explanation;
+       - the prominent centred **"✓ Approve & launch campaign"** button (the one human gate);
+       - **editable** AI-drafted per-channel copy below.
+    4. **Live operations view** (replaces the proposal on launch — feels like a different screen): a
+       pulsing "campaign live" banner, a **pipeline stage tracker** (Queued → Dispatching →
+       Delivering → Engaging → Complete), headline counters, a **delivery funnel** with stage-to-stage
+       conversion %, **channels-firing** cards, and a **live activity feed** — all driven by polling
+       `/campaigns/{id}/stats` every 2s (the feed is derived client-side from funnel deltas, **no
+       extra API calls**).
+    5. **Proven results** — *"fast-forward a week"* → `/simulate-conversions` + `/attribution` +
+       `/agent/report` → the **recovered-revenue** reveal, promoted to the top, with predicted-vs-
+       actual.
+  - **Insights tab (`components/Insights.tsx`)** — a deterministic customer-analytics dashboard
+    (`GET /insights`, **zero AI cost**): lifecycle-stage donut (Active/New/Occasional/Lapsing/Churned/
+    Lost), KPIs (gross revenue, AOV, **revenue-at-risk**), and channel / spend-bucket / top-city bars,
+    rendered with a **dependency-free** SVG/CSS chart kit (`components/Charts.tsx`).
+  - **Dashboard tab** — all campaigns; click any row to drill into a **per-campaign detail** (its own
+    live funnel + holdout-validated attribution + a fast-forward button), not just a log.
+  - A **"Reset demo"** button (`POST /demo/reset`) and a first-visit **Onboarding** overlay
+    (`components/Onboarding.tsx`, localStorage-gated).
 - **`components/Brand.tsx`** — logo + hero image with graceful fallbacks (a missing image degrades to
   a text wordmark / is hidden, never a broken icon).
 - **`lib/api.ts`** — a typed client; base URL from `NEXT_PUBLIC_CRM_URL` (baked at build).
 - **Images** are resized at build-prep (8MB hero → ~195KB) so the page stays fast.
-- **Why a real landing + vibrant app:** "creativity in scoping" and "thought clarity & communication"
+- **Sustainability bet:** everything added for *showcase* (opportunities, insights, tone, language,
+  capability cards) is **deterministic or static** — it spends **zero Gemini quota**. Only the core
+  `plan`/`report` calls hit the model. The demo can run indefinitely while reviewers poke at it
+  without exhausting the 500 req/day free tier.
+- **Why a platform home + vibrant app:** "creativity in scoping" and "thought clarity & communication"
   are explicitly graded. An empty form reads as boring; this makes the depth underneath *land*.
 
 ---
@@ -385,7 +427,7 @@ Holdout lift → incremental orders → RECOVERED REVENUE   (+ /agent/report nar
 | Manual drag-drop segment builder | The agent **is** the segment builder; building both dilutes the bet |
 | Auth / multi-user / orgs | Single-marketer persona; auth is undifferentiated plumbing |
 | Scheduling, templates library, A/B testing | One-shot agentic campaigns; these add no insight for the grade |
-| Multiple use-cases (welcome, cart-abandon…) | Going wide = shallow. One job (win-back), done deeply, wins |
+| Multiple *wired* use-cases (welcome, cart-abandon, weather…) | Win-back is built end-to-end; the others are shown as **honest, labelled platform capabilities** (preview cards), not faked as working. Going wide = shallow; one job done deeply wins |
 | Real channel integrations | Explicitly out of scope; the **stub is the point** |
 | Alembic migrations | Schema still moving fast; `/admin/recreate` is enough for this scope |
 | Decimal money, RBAC, rate limiting | Stated scale tradeoffs, not demo-critical |
@@ -412,7 +454,14 @@ Holdout lift → incremental orders → RECOVERED REVENUE   (+ /agent/report nar
 - [x] Async engine: outbox, concurrent dispatch, retries+backoff+dead-letter, idempotent +
       out-of-order receipts, state machine (verified end-to-end)
 - [x] Holdout-validated attribution → recovered revenue (verified: ~₹16.5k, 11.3% vs 2.0%)
-- [x] AI agent live (Gemini `gemini-3.1-flash-lite`): NL goal → typed `SegmentSpec` + copy + report
-- [x] Next.js frontend on Vercel — branded landing + vibrant app + reset (live, wired to CRM)
+- [x] AI agent live (Gemini `gemini-3.1-flash-lite`): NL goal → typed `SegmentSpec` + copy + report,
+      now also returning **strategy + offer + predicted recovered-revenue forecast**
+- [x] Next.js frontend on Vercel — **multi-brand platform home** + Taco Bell landing + vibrant app
+      (live, wired to CRM)
+- [x] Proactive **strategist** (`/strategy/opportunities`) + **Insights** analytics (`/insights`) —
+      both **deterministic, zero AI cost**
+- [x] Real add-ons: **tone rewriting** (static templates) + **channel-cost routing** (`?channel_strategy=cost`)
+- [x] **Live-operations** post-launch view (pipeline tracker + funnel + activity feed) and per-campaign
+      dashboard drill-down
 - [x] `POST /demo/reset` so reviewers can restore the pristine demo story
 - [ ] Record the 5–6 min walkthrough video (reseed beforehand) and submit
