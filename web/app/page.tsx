@@ -62,9 +62,9 @@ export default function PlatformHome() {
           <br /> <span className="text-tb-yellow">Every consumer brand.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/70">
-          Reach organises customer data, decides who to talk to, and runs personalised campaigns
-          across WhatsApp, SMS, Email & RCS — for brands across food, fashion and beauty.
-          <b className="text-white"> Pick a brand to open its workspace.</b>
+          Reach is a customer engagement platform that centralises customer data, automates audience
+          targeting, and delivers personalised campaigns across multiple channels.{" "}
+          <b className="text-white">Choose a brand to enter its workspace.</b>
         </p>
         <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-tb-yellow/40 bg-tb-yellow/10 px-4 py-1.5 text-sm text-tb-yellow">
           ▶ This demo is built out end-to-end for <b>Taco Bell</b> — click it below
