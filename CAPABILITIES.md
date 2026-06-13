@@ -26,6 +26,8 @@
 | 10 | **Narrate results** | The agent writes a plain-English summary grounded in the real funnel + attribution numbers. |
 | 11 | **Dashboard** | Lists all campaigns with status + engagement. |
 | 11b | **Customer insights (charts)** | A visual view of the base: lifecycle/RFM breakdown, revenue-at-risk, channel mix, spend distribution, top cities. |
+| 11c | **Strategy playbook (capabilities)** | Showcases the agent's wider toolkit — regional language, channel-cost routing, hunger-timed cart recovery, weather-aware offers, payday-cycle pricing, loss-aversion win-back. Win-back is built end-to-end; the rest plug into the same agent (signal-driven ones use live feeds in production). |
+| 11d | **Onboarding explainer** | A first-visit welcome overlay frames the demo so a reviewer instantly understands what they're seeing. |
 | 12 | **Reset demo** | One click restores the pristine dataset (for repeated reviewer testing). |
 
 ---
