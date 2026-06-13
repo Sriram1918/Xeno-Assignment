@@ -415,6 +415,99 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
             <Stat label="Channels" value={Object.keys(proposal.segment_preview.channel_breakdown).length.toString()} />
           </div>
 
+          {/* Launch setup moved here — right after the proposal so user never has to scroll far */}
+          {phase === "proposed" && (
+            <div className="mt-5 rounded-2xl border border-tb-yellow/40 bg-tb-yellow/[0.04] p-5">
+              <div className="text-sm font-semibold uppercase tracking-wide text-tb-yellow">
+                Launch setup — pick your add-ons
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Tone (rewrites copy)</span>
+                  <select
+                    value={tone}
+                    onChange={(e) => applyTone(e.target.value)}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
+                  >
+                    {["Standard", "Urgency", "Loss-aversion"].map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Language (preview)</span>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
+                  >
+                    {["English", "Hindi", "Hinglish", "Tamil", "Telugu"].map((l) => (
+                      <option key={l}>{l}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-white/70">
+                  <span className="text-xs uppercase tracking-wide text-white/45">Holdout %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={holdout}
+                    onChange={(e) => setHoldout(Number(e.target.value))}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-center text-white outline-none"
+                  />
+                </label>
+              </div>
+
+              <label className="mt-3 flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={costRouting}
+                  onChange={(e) => setCostRouting(e.target.checked)}
+                  className="h-4 w-4 accent-tb-yellow"
+                />
+                <span>
+                  <b>Channel-cost routing</b> — send low-value customers via free Email instead of paid WhatsApp
+                </span>
+              </label>
+
+              {/* Platform capabilities — explained, not just labelled */}
+              <div className="mt-4">
+                <div className="mb-2 text-xs uppercase tracking-wide text-white/40">Also available on this platform</div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    { icon: "⏰", title: "Cart-timing", desc: "Nudge a customer the moment they abandon a cart — not hours later. Food cravings expire fast." },
+                    { icon: "🌦️", title: "Weather-aware", desc: "Promote cold drinks on a 42°C day; hot fries on a monsoon evening. Hyper-local, zero extra spend." },
+                    { icon: "📅", title: "Payday-cycle", desc: "Push premium combos on salary day (1st–5th); value deals on the 25th when wallets are tight." },
+                  ].map((s) => (
+                    <div key={s.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-white/80">
+                        <span>{s.icon}</span> {s.title}
+                        <span className="ml-auto rounded-full bg-tb-magenta/15 px-1.5 py-0.5 text-[10px] text-tb-yellow">platform</span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-white/50">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button
+                  onClick={approveAndLaunch}
+                  disabled={loading}
+                  className="rounded-full bg-tb-yellow px-10 py-4 text-lg font-bold text-black shadow-[0_0_50px_-12px] shadow-tb-yellow/70 transition hover:scale-[1.03] disabled:opacity-50"
+                >
+                  {loading ? "Launching…" : "✓ Approve & launch campaign"}
+                </button>
+                <span className="text-xs text-white/50">
+                  A random {holdout}% is held back as a control group to prove real lift
+                  {costRouting ? " · cost routing on" : ""}.
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4">
             <Label>Channel mix</Label>
             <div className="mt-1 space-y-1">
@@ -474,90 +567,6 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
             </div>
           </div>
 
-          {phase === "proposed" && (
-            <div className="mt-5 rounded-2xl border border-tb-yellow/40 bg-tb-yellow/[0.04] p-5">
-              <div className="text-sm font-semibold uppercase tracking-wide text-tb-yellow">
-                Launch setup — pick your add-ons
-              </div>
-
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="flex flex-col gap-1 text-sm text-white/70">
-                  <span className="text-xs uppercase tracking-wide text-white/45">Tone (rewrites copy)</span>
-                  <select
-                    value={tone}
-                    onChange={(e) => applyTone(e.target.value)}
-                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
-                  >
-                    {["Standard", "Urgency", "Loss-aversion"].map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-white/70">
-                  <span className="text-xs uppercase tracking-wide text-white/45">Language (preview)</span>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-white outline-none"
-                  >
-                    {["English", "Hindi", "Hinglish", "Tamil", "Telugu"].map((l) => (
-                      <option key={l}>{l}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-white/70">
-                  <span className="text-xs uppercase tracking-wide text-white/45">Holdout %</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={50}
-                    value={holdout}
-                    onChange={(e) => setHoldout(Number(e.target.value))}
-                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-center text-white outline-none"
-                  />
-                </label>
-              </div>
-
-              <label className="mt-3 flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="checkbox"
-                  checked={costRouting}
-                  onChange={(e) => setCostRouting(e.target.checked)}
-                  className="h-4 w-4 accent-tb-yellow"
-                />
-                <span>
-                  <b>Channel-cost routing</b> — send low-value customers via free Email instead of paid WhatsApp
-                </span>
-              </label>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-white/40">Also available:</span>
-                {["⏰ Cart-timing", "🌦️ Weather-aware", "📅 Payday-cycle"].map((s) => (
-                  <span
-                    key={s}
-                    title="Platform capability — uses live data feeds in production"
-                    className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/55"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-5 flex flex-col items-center gap-2">
-                <button
-                  onClick={approveAndLaunch}
-                  disabled={loading}
-                  className="rounded-full bg-tb-yellow px-10 py-4 text-lg font-bold text-black shadow-[0_0_50px_-12px] shadow-tb-yellow/70 transition hover:scale-[1.03] disabled:opacity-50"
-                >
-                  {loading ? "Launching…" : "✓ Approve & launch campaign"}
-                </button>
-                <span className="text-xs text-white/50">
-                  A random {holdout}% is held back as a control group to prove real lift
-                  {costRouting ? " · cost routing on" : ""}.
-                </span>
-              </div>
-            </div>
-          )}
         </Card>
       )}
 
