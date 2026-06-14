@@ -29,9 +29,8 @@ export default function TacoBellLanding() {
         </h1>
 
         <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/70">
-          Just describe a goal in plain English. An <b className="text-white">AI agent</b> finds your
-          lapsed shoppers, writes and sends personalised messages across WhatsApp, SMS & Email — then{" "}
-          <b className="text-white">proves the revenue</b> it actually brought back.
+          State your objective in plain English. <b className="text-white">Our agents will take it
+          from there.</b>
         </p>
 
         <Link
