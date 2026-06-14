@@ -365,6 +365,12 @@ layer that turns the engine into something a marketer (and a reviewer) wants to 
          Email** instead of paid WhatsApp (`?channel_strategy=cost` on launch);
        - **Holdout %**, a **Language** preview selector, and three "also on this platform" capability
          cards (Cart-timing / Weather-aware / Payday-cycle) each with a one-line explanation;
+       - **Branch-level local context** (`lib/branches.ts`) — pick a **real** Taco Bell outlet (real
+         name + city + address) and the agent shows an on-ground read for it: today's **weather** with
+         a weather-driven **angle suggestion**, and the outlet's **last-30-day product movers**
+         (rising/falling). Outlet/location are real; weather & sales are **deterministic simulated
+         signals** (a stable hash, no external feed → zero AI cost) — the honest hook a real local
+         data feed would plug into;
        - the prominent centred **"✓ Approve & launch campaign"** button (the one human gate);
        - **editable** AI-drafted per-channel copy below.
     4. **Live operations view** (replaces the proposal on launch — feels like a different screen): a

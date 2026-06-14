@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Brandmark } from "@/components/Brand";
 import { Insights } from "@/components/Insights";
 import { Onboarding } from "@/components/Onboarding";
+import { BRANCHES, branchSignals } from "@/lib/branches";
 import {
   api,
   Attribution,
@@ -178,6 +179,7 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
   const [language, setLanguage] = useState("English");
   const [tone, setTone] = useState("Standard");
   const [costRouting, setCostRouting] = useState(false);
+  const [branchId, setBranchId] = useState("");
 
   // Tone really rewrites the copy (static variants — no AI call). Standard = the AI's draft.
   const applyTone = (t: string) => {
@@ -471,6 +473,28 @@ function AgentFlow({ onChange }: { onChange: () => void }) {
                   <b>Channel-cost routing</b> — send low-value customers via free Email instead of paid WhatsApp
                 </span>
               </label>
+
+              {/* Branch-level local context — the agent reads weather + sales for the chosen outlet */}
+              <div className="mt-4">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide text-white/45">
+                    📍 Localise by branch — agent reads the on-ground context
+                  </span>
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="rounded-lg border border-white/15 bg-black/30 px-2 py-1.5 text-sm text-white outline-none"
+                  >
+                    <option value="">Choose an outlet…</option>
+                    {BRANCHES.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} · {b.city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {branchId && <BranchContext branchId={branchId} />}
+              </div>
 
               {/* Platform capabilities — explained, not just labelled */}
               <div className="mt-4">
@@ -1060,6 +1084,64 @@ function CampaignDetail({ campaign, onBack }: { campaign: CampaignRow; onBack: (
           </div>
         </Card>
       )}
+    </div>
+  );
+}
+
+/* ---------- Branch-level agent context (weather + sales, demo signals) ---------- */
+
+function BranchContext({ branchId }: { branchId: string }) {
+  const branch = BRANCHES.find((b) => b.id === branchId);
+  if (!branch) return null;
+  const { weather, rising, falling } = branchSignals(branch);
+
+  return (
+    <div className="animate-rise rounded-xl border border-tb-yellow/30 bg-gradient-to-b from-tb-magenta/10 to-white/[0.02] p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-tb-yellow">
+        🤖 Reach agent · local read for {branch.name}
+      </div>
+      <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+        📍 {branch.address}, {branch.city}, {branch.state}
+      </p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {/* Weather + angle */}
+        <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wide text-white/45">Weather today</span>
+            <span className="text-2xl">{weather.emoji}</span>
+          </div>
+          <div className="mt-1 text-2xl font-bold tabular-nums">
+            {weather.tempC}°C <span className="text-sm font-normal text-white/55">· {weather.condition}</span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-white/75">
+            <b className="text-tb-yellow">Agent suggestion:</b> {weather.angle}
+          </p>
+        </div>
+
+        {/* Last-30-day product movers */}
+        <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+          <div className="text-xs uppercase tracking-wide text-white/45">Last 30 days at this outlet</div>
+          <div className="mt-2 space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80">{rising.item}</span>
+              <span className="font-semibold text-emerald-400">▲ {rising.pct}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/80">{falling.item}</span>
+              <span className="font-semibold text-red-400">▼ {falling.pct}%</span>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-white/45">
+            Agent will feature <b className="text-white/70">{rising.item}</b> and rescue{" "}
+            <b className="text-white/70">{falling.item}</b> with a win-back offer.
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-[10px] leading-relaxed text-white/35">
+        Outlet name &amp; location are real; weather and sales movers are simulated demo signals (no live feed).
+      </p>
     </div>
   );
 }

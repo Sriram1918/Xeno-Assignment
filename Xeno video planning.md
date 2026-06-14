@@ -1,4 +1,8 @@
-# Xeno Video — Shooting Script (≈6:15, twelve beats)
+# Xeno Video — Shooting Script (≈6:30, thirteen beats incl. 5B)
+
+> **Note on timings:** beats 6–12 below still carry their old clock labels; with the new branch beat
+> (5B) they each shift ~20s later. Treat the timestamps as *relative pacing*, not hard marks — your
+> real target is "land beat 7's proof around the 3:30 mark, finish under ~6:40."
 
 > **Format:** Shoot each beat as its own take. Stitch in edit. Never attempt 6 min in one pass.
 > **On-camera:** Face-cam picture-in-picture. Full-frame face on the talking beats (1, 2, 7, 10, 11, 12). Small corner face on the live-demo beats (3, 4, 5, 6, 8, 9).
@@ -8,12 +12,32 @@
 > AI-native CRM**. The platform home lists real Xeno client verticals; **Taco Bell is the one live,
 > built-out workspace**. Inside it: a proactive **strategist** surfaces win-back plays; an **agent**
 > turns a plain-English goal into a typed audience + personalised copy; you tune **real add-ons**
-> (tone rewrite, channel-cost routing, holdout); launch streams into a **live operations view**; and
-> a **holdout control group** proves the recovered revenue. Plus an **Insights** analytics tab.
+> (tone rewrite, channel-cost routing, holdout, and **branch-level local context** — pick an outlet
+> and the agent reads its weather + last-30-day product movers and suggests an angle); launch streams
+> into a **live operations view**; and a **holdout control group** proves the recovered revenue.
+> Plus an **Insights** analytics tab.
+>
+> **THE FRAMING (say this throughout, it's the whole pitch):** Everything on screen reads as if **the
+> agent did it** — the opportunities, the audience, the copy, the insights, the branch weather read,
+> the dashboards. Never call anything "an endpoint" or "a page I built." Narrate it as *"my agent
+> already…", "the agent suggests…", "it figured out…"*. The story is: **you describe an outcome; the
+> agents have already done the thinking.** Built data of 2,500 seeded customers is the agent's
+> playground — it analyses, suggests, drafts, sends, and proves. You are the human who approves.
 
 ---
 
 ## Delivery rules (read once, internalize, then forget)
+
+**Your setup:** Screen-recording + voice the whole time, with your **phone propped right next to the
+laptop screen** as a teleprompter (the "Say" lines below live on your phone). Two rules that make this
+not look like reading:
+- **Prop the phone as high and as close to the webcam/lens as possible** so your eyes barely move off
+  camera. Big font, scroll slowly.
+- **Read a full sentence silently, then look up/at the screen action and say it.** Glance down → speak
+  → glance down. Never read mid-word with your eyes pinned to the phone — that's the tell. The half-
+  beat pause while you glance reads as *thinking*, which is exactly the vibe you want.
+- On the **demo beats**, you're mostly narrating what's happening on screen anyway, so your eyes are on
+  the laptop, not the phone — those are the easy ones. Save the phone for the **talking beats**.
 
 **The one mindset:** You are showing a clever thing to *one* friend who is smart but busy. Not "presenting." Not "pitching." Showing.
 
@@ -91,17 +115,32 @@
 
 ---
 
-## BEAT 5 — Demo: Copy, Real Add-ons, and the Human Gate (2:05–2:45)
-**One point:** Per-channel personalised copy, *real* levers (not decoration), and nothing sends without a human.
+## BEAT 5 — Demo: Copy, Tone & the Agent's Local Read (2:05–2:50)
+**One point:** Per-channel personalised copy, a *real* tone lever, and the agent reading **on-ground branch context** (weather + sales) to pick an angle — not generic blasting.
 
-**On screen:** Per-channel drafts (WhatsApp/SMS/Email/RCS). Change **Tone** → copy visibly rewrites. Toggle **Channel-cost routing**. Then the centred **Approve & launch**. Face in corner.
+**On screen:** Per-channel drafts (WhatsApp/SMS/Email/RCS). Change **Tone** → copy visibly rewrites. Then **pick a branch** from the localise dropdown → the agent's **weather card + product movers** appear. Face in corner.
 
-**Do + say:**
-> "It writes per channel — WhatsApp short and warm, SMS tight because characters cost money. And these aren't fake knobs. Watch — I switch the **tone** to loss-aversion and the copy actually rewrites. I flip on **channel-cost routing** — low-value customers get free email instead of paid WhatsApp, a real spend decision. Holdout stays at ten percent. *Then* — and only then — nothing has sent yet. I'm the gate. I approve."
+**Do + say (let the screen lead):**
+> "Now it writes — per channel. WhatsApp short and warm, SMS tight because characters cost money. And these aren't fake knobs: I switch the **tone** to loss-aversion and the copy actually rewrites. But here's the part I love. A campaign isn't one-size-fits-all across a country. So I pick a branch — say **Koramangala, Bengaluru** — and the agent reads the *local* context: it's 41 degrees in Ahmedabad, lead with chilled drinks; it's raining in Guwahati, push delivery. It even sees what's selling at *that* outlet this month — Crunchwrap's up, Quesadilla's slipping — and says 'feature this, rescue that.' That's the agent thinking like a local marketer, not a mail-merge."
 
-**Tone:** Proud of the small clever things; grounded on "I'm the gate."
-**Face/body:** Light smile on "characters cost money." Slightly more serious, confident nod on "I approve."
-**Retake if:** The tone rewrite didn't visibly change copy on screen (the whole point) · copy had a typo · you didn't make the human-gate feel real.
+**Tone:** Proud of the small clever things; let "41 degrees… raining in Guwahati" land as a real *aha*.
+**Face/body:** Light smile on "characters cost money." Switch a couple of branches on screen so the weather/angle visibly changes — that contrast *is* the wow.
+**Note (honesty, say it lightly once):** "The outlet and its location are real; the weather and sales here are simulated demo signals — but it's exactly the hook a real local feed would plug into."
+**Retake if:** The tone rewrite or the branch card didn't visibly change on screen (the whole point) · you didn't switch branches to show different weather · copy had a typo.
+
+---
+
+## BEAT 5B — Demo: The Human Gate (2:50–3:05)  *(short beat)*
+**One point:** The agent does the heavy lifting; nothing sends without a human approving.
+
+**On screen:** Channel-cost routing toggle, holdout at 10%, then the centred **Approve & launch**. Face in corner.
+
+**Say:**
+> "One more real lever — channel-cost routing sends low-value customers via free email instead of paid WhatsApp. Holdout stays at ten percent. And *then* — only then — nothing has actually sent yet. I'm the gate. I approve."
+
+**Tone:** Grounded, trustworthy. The "safety" beat.
+**Face/body:** Slightly more serious, confident nod on "I approve."
+**Retake if:** The approve action lagged · you sounded unsure whether the gate mattered.
 
 ---
 
